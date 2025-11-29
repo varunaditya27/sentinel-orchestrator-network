@@ -102,6 +102,30 @@ User (Wallet/dApp) → Masumi Orchestrator → Multi-Agent Cluster → Hydra Con
                          Kodosumi Runtime Sandbox
 ```
 
+### Detailed Workflow
+
+1.  **Initiation**: A user submits a transaction CBOR or Policy ID via the **Sentinel Dashboard**.
+2.  **Orchestration**: The **Masumi Orchestrator** receives the request and spins up a dedicated `SentinelAgent`.
+3.  **Analysis**:
+    *   **Sentinel Agent**: Decompiles the transaction, checks for known scam patterns (e.g., "deadbeef"), and validates against the `policy.json` registry.
+    *   **Oracle Agent**: (Optional) Cross-references external data feeds for price or identity verification.
+4.  **Consensus (The Hydra Layer)**:
+    *   Instead of waiting for slow L1 block confirmations, agents submit their findings to a **Hydra Head**.
+    *   The **Hydra Node** validates the transaction off-chain in milliseconds.
+    *   If valid, it signs a "Verdict Certificate".
+5.  **Finalization**:
+    *   The verdict is returned to the frontend immediately via WebSockets.
+    *   A **ThreatProof Capsule** (containing the verdict and agent signatures) is minted on Cardano L1 for immutable history.
+    *   An **Audit Report** (PDF) is generated for the user.
+
+### Why Hydra? ⚡
+
+Hydra is the backbone of SON's real-time security capability. Without it, the system would be too slow to protect users from immediate threats.
+
+*   **Sub-Second Latency**: Hydra allows our agents to reach consensus on a threat in <1 second, compared to 20+ seconds on L1. This "pre-block" finality is crucial for stopping malicious transactions *before* they are included in a block.
+*   **Zero-Cost Consensus**: Agent-to-agent communication and voting happen off-chain, avoiding L1 gas fees for every internal decision. We only pay L1 fees when minting the final ThreatProof Capsule.
+*   **Scalability**: The system can handle thousands of concurrent threat scans by spinning up parallel Hydra Heads, ensuring the network never gets clogged.
+
 ### Core Components
 
 - **Frontend:** Next.js dashboard with real-time WebSocket updates
@@ -182,7 +206,7 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env  # Configure API keys
-python main.py
+uvicorn main:app --reload
 # Runs on http://localhost:8000
 ```
 
@@ -292,4 +316,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for Cardano's decentralized future**
 
-*For questions or support, join our [Discord](https://discord.gg/son-cardano) or open an issue on GitHub.*

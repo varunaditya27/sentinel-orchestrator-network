@@ -13,7 +13,52 @@ function VerdictContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const status = (searchParams.get("status") as "SAFE" | "DANGER" | "WARNING") || "DANGER";
+    const taskId = searchParams.get("taskId");
     const [showProof, setShowProof] = useState(false);
+    const [proofData, setProofData] = useState(null);
+
+    const downloadReport = async () => {
+        if (!taskId) {
+            alert("No Task ID found. Cannot download report.");
+            return;
+        }
+        try {
+            const response = await fetch(`http://localhost:8000/api/v1/report/${taskId}`);
+            if (!response.ok) throw new Error("Report not found");
+            
+            const blob = await response.blob();
+            const pdfBlob = new Blob([blob], { type: "application/pdf" });
+            const url = window.URL.createObjectURL(pdfBlob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `AUDIT-REPORT-${taskId.slice(0, 8)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Failed to download report:", error);
+            alert("Failed to download report. Please try again.");
+        }
+    };
+
+    const fetchProof = async () => {
+        if (!taskId) {
+            // Fallback for demo if no task ID (e.g. direct visit)
+            setShowProof(true); 
+            return;
+        }
+        try {
+            const response = await fetch(`http://localhost:8000/api/v1/proof/${taskId}`);
+            if (!response.ok) throw new Error("Proof not found");
+            const data = await response.json();
+            setProofData(data);
+            setShowProof(true);
+        } catch (error) {
+            console.error("Failed to fetch proof:", error);
+            alert("Failed to fetch proof details.");
+        }
+    };
 
     // Sound effect simulation (visual only for now)
     useEffect(() => {
@@ -110,7 +155,7 @@ function VerdictContent() {
                             animate={{ x: 0, opacity: 1 }}
                             transition={{ delay: 0.6 }}
                         >
-                            <HolographicCard className="h-full p-8 bg-black/40 border-white/10 backdrop-blur-xl hover:bg-white/5 transition-colors group cursor-pointer rounded-3xl" onClick={() => setShowProof(true)}>
+                            <HolographicCard className="h-full p-8 bg-black/40 border-white/10 backdrop-blur-xl hover:bg-white/5 transition-colors group cursor-pointer rounded-3xl" onClick={fetchProof}>
                                 <div className="flex items-start justify-between mb-6">
                                     <div className={`p-3 rounded-lg ${isDanger ? "bg-red-500/20 text-red-500" :
                                         isWarning ? "bg-amber-500/20 text-amber-500" :
@@ -131,7 +176,7 @@ function VerdictContent() {
                             animate={{ x: 0, opacity: 1 }}
                             transition={{ delay: 0.7 }}
                         >
-                            <HolographicCard className="h-full p-8 bg-black/40 border-white/10 backdrop-blur-xl hover:bg-white/5 transition-colors group cursor-pointer rounded-3xl">
+                            <HolographicCard className="h-full p-8 bg-black/40 border-white/10 backdrop-blur-xl hover:bg-white/5 transition-colors group cursor-pointer rounded-3xl" onClick={downloadReport}>
                                 <div className="flex items-start justify-between mb-6">
                                     <div className={`p-3 rounded-lg ${isDanger ? "bg-red-500/20 text-red-500" :
                                         isWarning ? "bg-amber-500/20 text-amber-500" :
@@ -169,12 +214,13 @@ function VerdictContent() {
 
             {/* Proof Overlay */}
             <AnimatePresence>
-                {showProof && (
-                    <ThreatProofCard
-                        verdict={status}
-                        onClose={() => setShowProof(false)}
-                    />
-                )}
+                    {showProof && (
+                        <ThreatProofCard
+                            verdict={status}
+                            proofData={proofData}
+                            onClose={() => setShowProof(false)}
+                        />
+                    )}
             </AnimatePresence>
         </main>
     );

@@ -28,6 +28,7 @@ import nacl.signing
 from nacl.signing import SigningKey
 
 from .base import BaseAgent, Vote
+from .hydra_node import HydraNode
 
 if TYPE_CHECKING:
     from .oracle import OracleAgent
@@ -66,7 +67,8 @@ class SentinelAgent(BaseAgent):
     def __init__(
         self, 
         oracle_agent: Optional["OracleAgent"] = None,
-        enable_llm: bool = True
+        enable_llm: bool = True,
+        enable_hydra: bool = True
     ):
         """
         Initialize the Sentinel Agent.
@@ -74,8 +76,13 @@ class SentinelAgent(BaseAgent):
         Args:
             oracle_agent: Reference to Oracle agent for HIRE_REQUEST
             enable_llm: Whether to enable LLM-enhanced analysis
+            enable_hydra: Whether to enable Hydra Head for off-chain checks
         """
         super().__init__(agent_name="sentinel", role="orchestrator", enable_llm=enable_llm)
+        
+        # Initialize Hydra Node
+        self.hydra_enabled = enable_hydra
+        self.hydra_node = HydraNode() if enable_hydra else None
         
         # Generate cryptographic keypair for message signing
         self.private_key = SigningKey.generate()
@@ -121,6 +128,31 @@ class SentinelAgent(BaseAgent):
         user_tip = input_data.get("user_tip", 0)
         
         self.log_start(policy_id or tx_cbor[:16] if tx_cbor else "unknown")
+        
+        # Step 0: Ultra-Fast Hydra Check (Off-chain)
+        if self.hydra_enabled and self.hydra_node:
+            self.logger.info("Attempting Ultra-Fast Hydra Check...")
+            try:
+                hydra_result = await self.hydra_node.validate_transaction_offchain(tx_cbor, policy_id)
+                
+                if hydra_result.get("verified"):
+                    self.logger.info(f"Hydra Verdict: {hydra_result['verdict']} ({hydra_result['latency_ms']}ms)")
+                    
+                    # Map Hydra verdict to Vote
+                    verdict_str = hydra_result['verdict']
+                    verdict = Vote.DANGER if verdict_str == "DANGER" else Vote.SAFE
+                    
+                    return self._build_result(
+                        policy_id=policy_id,
+                        verdict=verdict,
+                        risk_score=hydra_result['risk_score'],
+                        compliance_result={"status": "hydra_verified", "checks": []},
+                        oracle_result=None,
+                        reason=hydra_result['reason']
+                    )
+            except Exception as e:
+                self.logger.error(f"Hydra check failed: {e}")
+                # Fallback to standard flow
         
         # Step 1: Protocol compliance check
         compliance_result = self._check_protocol_compliance(policy_id, tx_cbor)

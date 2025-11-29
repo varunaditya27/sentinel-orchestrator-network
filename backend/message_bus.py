@@ -164,8 +164,14 @@ class MessageBus:
                 message, sort_keys=True, separators=(',', ':')
             ).encode('utf-8')
             
-            # Decode signature from base64
-            signature_bytes = bytes.fromhex(signature_b64) if len(signature_b64) < 200 else None
+            # Decode signature (try hex first, then base64)
+            signature_bytes = None
+            try:
+                if len(signature_b64) < 200:
+                    signature_bytes = bytes.fromhex(signature_b64)
+            except ValueError:
+                pass
+            
             if not signature_bytes:
                 signature_bytes = __import__('base64').b64decode(signature_b64)
             

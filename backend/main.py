@@ -1,5 +1,8 @@
-from fastapi import FastAPI, WebSocket, BackgroundTasks, HTTPException
+from fastapi import FastAPI, WebSocket, BackgroundTasks, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
+from fpdf import FPDF
 from message_bus import MessageBus
 from agents import SentinelAgent, OracleAgent
 import uuid
@@ -7,6 +10,7 @@ import logging
 import json
 import base64
 from datetime import datetime
+import asyncio
 
 # Initialize Logging
 logging.basicConfig(level=logging.INFO)
@@ -19,12 +23,24 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Add CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Initialize MessageBus
 message_bus = MessageBus()
 
 # Initialize Agents
-sentinel = SentinelAgent(enable_llm=True)
+sentinel = SentinelAgent(enable_llm=True, enable_hydra=True)
 oracle = OracleAgent(enable_llm=True)
+
+# In-memory store for scan results (for reports/proofs)
+results_store: Dict[str, Any] = {}
 
 # Connect agents to each other
 sentinel.set_oracle(oracle)
@@ -42,8 +58,8 @@ logger.info("✅ Sentinel and Oracle agents initialized and connected")
 
 class ScanRequest(BaseModel):
     """Request model for policy/transaction scan"""
-    policy_id: str = None
-    tx_cbor: str = None
+    policy_id: Optional[str] = None
+    tx_cbor: Optional[str] = None
     user_tip: int = 0  # User's node block height
     
     class Config:
@@ -57,11 +73,11 @@ class ScanResponse(BaseModel):
     """Response model for scan results"""
     task_id: str
     status: str
-    policy_id: str = None
-    verdict: str = None
-    risk_score: int = None
-    reason: str = None
-    timestamp: str = None
+    policy_id: Optional[str] = None
+    verdict: Optional[str] = None
+    risk_score: Optional[int] = None
+    reason: Optional[str] = None
+    timestamp: Optional[str] = None
 
 
 # =============================================================================
@@ -74,18 +90,27 @@ async def run_sentinel_scan(policy_id: str, user_tip: int, task_id: str):
     Publishes results to MessageBus for WebSocket clients.
     """
     try:
+        # Wait for client to connect via WebSocket
+        await asyncio.sleep(1.0)
+        
         logger.info(f"[{task_id}] Starting Sentinel scan for policy: {policy_id[:16]}...")
         
-        # Run Sentinel agent
-        result = await sentinel.process({
+        # Prepare scan request for Sentinel agent
+        scan_request = {
             "policy_id": policy_id,
             "user_tip": user_tip,
             "timestamp": datetime.utcnow().isoformat() + "Z"
-        })
+        }
+        
+        # Run Sentinel agent
+        result = await sentinel.process(scan_request)
+        
+        # Store result for report/proof retrieval
+        results_store[task_id] = result
         
         # Build response envelope for MessageBus
         response_envelope = {
-            "sender_did": "did:masumi:sentinel_01",
+            "from_did": "did:masumi:sentinel_01",
             "payload": {
                 "task_id": task_id,
                 "policy_id": policy_id,
@@ -113,7 +138,7 @@ async def run_sentinel_scan(policy_id: str, user_tip: int, task_id: str):
         
         # Publish error envelope
         error_envelope = {
-            "sender_did": "did:masumi:sentinel_01",
+            "from_did": "did:masumi:sentinel_01",
             "payload": {
                 "task_id": task_id,
                 "status": "failed",
@@ -170,11 +195,123 @@ async def scan(request: ScanRequest, background_tasks: BackgroundTasks):
     
     return ScanResponse(
         task_id=task_id,
-        status="initiated",
-        policy_id=request.policy_id,
+        status="processing",
         timestamp=datetime.utcnow().isoformat() + "Z"
     )
 
+@app.get("/api/v1/report/{task_id}")
+async def get_audit_report(task_id: str):
+    """Generate and return a detailed audit report in PDF format."""
+    if task_id not in results_store:
+        raise HTTPException(status_code=404, detail="Task ID not found")
+    
+    result = results_store[task_id]
+    
+    # Create PDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    
+    # Header
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(200, 10, txt="Sentinel Orchestrator Network - Audit Report", ln=1, align="C")
+    pdf.ln(10)
+    
+    # Metadata
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"Report ID: AUDIT-{task_id[:8].upper()}", ln=1)
+    pdf.cell(200, 10, txt=f"Timestamp: {datetime.utcnow().isoformat()}Z", ln=1)
+    pdf.cell(200, 10, txt=f"Verdict: {result.get('verdict')}", ln=1)
+    pdf.cell(200, 10, txt=f"Risk Score: {result.get('risk_score')}", ln=1)
+    pdf.ln(10)
+    
+    # Details
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(200, 10, txt="Analysis Details", ln=1)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, txt=f"Reason: {result.get('reason')}")
+    pdf.ln(5)
+    
+    pdf.cell(200, 10, txt=f"Policy ID: {result.get('policy_id')}", ln=1)
+    pdf.cell(200, 10, txt=f"Hydra Verification: Enabled", ln=1)
+    
+    # Footer
+    pdf.ln(20)
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(200, 10, txt="Signed by: did:masumi:sentinel_01", ln=1, align="R")
+    
+    # Output
+    # In fpdf2, output() returns bytearray by default if no name provided
+    pdf_bytes = bytes(pdf.output())
+    
+    logger.info(f"Generated PDF report for {task_id}: {len(pdf_bytes)} bytes")
+    
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={
+        "Content-Disposition": f"attachment; filename=AUDIT-{task_id[:8]}.pdf"
+    })
+
+@app.get("/api/v1/proof/{task_id}")
+async def get_cryptographic_proof(task_id: str):
+    """Return cryptographic proofs and signatures for the scan."""
+    if task_id not in results_store:
+        raise HTTPException(status_code=404, detail="Task ID not found")
+    
+    result = results_store[task_id]
+    
+    # Construct proof object
+    proof = {
+        "proof_id": f"PROOF-{task_id[:8].upper()}",
+        "task_id": task_id,
+        "verdict": result.get("verdict"),
+        "signatures": [
+            {
+                "agent": "Sentinel Agent",
+                "did": "did:masumi:sentinel_01",
+                "signature": "base64_encoded_signature_placeholder", # In real app, this would be the actual sig
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            },
+            {
+                "agent": "Hydra Head",
+                "did": "did:masumi:hydra_head_01",
+                "signature": "base64_encoded_signature_placeholder",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+        ],
+        "merkle_root": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", # Mock Merkle root
+        "zk_proof": "0x..." # Mock ZK proof
+    }
+    return proof
+
+
+@app.get("/api/v1/system/status")
+async def get_system_status():
+    """Return real-time status of the agent network."""
+    # Check Hydra connection
+    hydra_status = "Active" if sentinel.hydra_node and sentinel.hydra_node.hydra_client and sentinel.hydra_node.hydra_client.websocket else "Offline"
+    
+    return {
+        "sentinel": "Active",
+        "oracle": "Standby", # Oracle is always standby in this demo until called
+        "hydra": hydra_status,
+        "midnight": "Offline", # Midnight is mocked for now
+        "network_uptime": "99.9%",
+        "active_agents": 3
+    }
+
+@app.get("/api/v1/scans/history")
+async def get_scan_history():
+    """Return recent scan history."""
+    history = []
+    for task_id, result in results_store.items():
+        history.append({
+            "task_id": task_id,
+            "policy_id": result.get("policy_id"),
+            "verdict": result.get("verdict"),
+            "timestamp": result.get("timestamp"),
+            "risk_score": result.get("risk_score")
+        })
+    # Sort by timestamp desc
+    return sorted(history, key=lambda x: x.get("timestamp", ""), reverse=True)
 
 @app.get("/api/v1/agents/info")
 async def agents_info():

@@ -51,6 +51,47 @@ export default function Dashboard() {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [paymentActive, setPaymentActive] = useState(false);
     const [randomBytes, setRandomBytes] = useState<string[]>([]);
+    const [inputPayload, setInputPayload] = useState("");
+    const [systemStatus, setSystemStatus] = useState({
+        sentinel: "Active",
+        oracle: "Standby",
+        hydra: "Offline",
+        midnight: "Offline",
+        network_uptime: "99.9%",
+        active_agents: 3
+    });
+    const [showHistory, setShowHistory] = useState(false);
+    const [scanHistory, setScanHistory] = useState<any[]>([]);
+
+    const fetchHistory = async () => {
+        try {
+            const res = await fetch("http://localhost:8000/api/v1/scans/history");
+            if (res.ok) {
+                const data = await res.json();
+                setScanHistory(data);
+                setShowHistory(true);
+            }
+        } catch (e) {
+            console.error("Failed to fetch history", e);
+        }
+    };
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/system/status");
+                if (res.ok) {
+                    const data = await res.json();
+                    setSystemStatus(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch system status", e);
+            }
+        };
+        fetchStatus();
+        const interval = setInterval(fetchStatus, 10000); // Poll every 10s
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -69,29 +110,69 @@ export default function Dashboard() {
         }
     }, [logs]);
 
-    const startScan = () => {
+    const startScan = async () => {
+        if (!scanState || scanState === "SCANNING") return;
+        
         setScanState("SCANNING");
         setLogs([]);
+        
+        try {
+            // Determine if input is Policy ID (hex, 56 chars) or CBOR
+            const isPolicyId = /^[0-9a-fA-F]{56}$/.test(inputPayload.trim());
+            
+            const payload = {
+                user_tip: 1000,
+                ...(isPolicyId ? { policy_id: inputPayload.trim() } : { tx_cbor: inputPayload.trim() })
+            };
 
-        // Simulate log stream
-        let delay = 0;
-        MOCK_LOGS.forEach((log) => {
-            // Calculate relative delay based on timestamps in MOCK_LOGS
-            const relativeDelay = log.timestamp - MOCK_LOGS[0].timestamp;
-            delay = relativeDelay;
-
-            setTimeout(() => {
-                setLogs((prev) => [...prev, { ...log, id: Math.random().toString(), timestamp: Date.now() }]);
-            }, delay);
-        });
-
-        // Redirect to verdict page
-        setTimeout(() => {
-            setScanState("VERDICT");
-            setTimeout(() => {
-                router.push(`/verdict?status=${verdict}`);
-            }, 1500); // Wait for hyperspace effect
-        }, delay + 1500);
+            // 1. Call API to start scan
+            const response = await fetch("http://localhost:8000/api/v1/scan", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
+            const taskId = data.task_id;
+            
+            // 2. Connect to WebSocket for results
+            const ws = new WebSocket(`ws://localhost:8000/ws/scan/${taskId}`);
+            
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                const payload = message.payload;
+                
+                if (payload) {
+                    // Add log entry
+                    setLogs(prev => [...prev, {
+                        id: Math.random().toString(),
+                        agent: "SENTINEL",
+                        message: `VERDICT: ${payload.verdict} (${payload.reason})`,
+                        type: payload.verdict === "SAFE" ? "success" : "error",
+                        timestamp: Date.now()
+                    }]);
+                    
+                    // If verdict received, redirect
+                    if (payload.verdict) {
+                        setTimeout(() => {
+                            setScanState("VERDICT");
+                            // Redirect to verdict page with status and task ID
+                            router.push(`/verdict?status=${payload.verdict}&taskId=${data.task_id}`);
+                        }, 1500);
+                        ws.close();
+                    }
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                setScanState("IDLE");
+            };
+            
+        } catch (error) {
+            console.error("Scan failed:", error);
+            setScanState("IDLE");
+        }
     };
 
     return (
@@ -150,14 +231,13 @@ export default function Dashboard() {
                                 ))}
                             </div>
 
-                            <textarea
-                                className="w-full h-full bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none custom-scrollbar relative z-10 backdrop-blur-sm"
-                                placeholder="Paste raw transaction CBOR here..."
-                                disabled={scanState !== "IDLE"}
-                                onChange={() => {
-                                    // Trigger simple visual feedback
-                                }}
-                            />
+                                <textarea
+                                    className="w-full h-full bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none custom-scrollbar relative z-10 backdrop-blur-sm"
+                                    placeholder="Paste raw transaction CBOR here..."
+                                    disabled={scanState !== "IDLE"}
+                                    value={inputPayload}
+                                    onChange={(e) => setInputPayload(e.target.value)}
+                                />
 
                             {/* Analysis Overlay */}
                             <AnimatePresence>
@@ -215,7 +295,7 @@ export default function Dashboard() {
                                 <div className="w-2 h-2 bg-electric-cyan rounded-full animate-pulse" />
                             </div>
                             <div className="relative z-10">
-                                <div className="text-2xl font-orbitron font-bold">99.9%</div>
+                                <div className="text-2xl font-orbitron font-bold">{systemStatus.network_uptime}</div>
                                 <div className="text-[10px] text-white/50 uppercase tracking-wider">Network Uptime</div>
                             </div>
                         </Card>
@@ -226,11 +306,16 @@ export default function Dashboard() {
                                 <Wifi className="w-4 h-4 text-plasma-pink/50" />
                             </div>
                             <div className="relative z-10">
-                                <div className="text-2xl font-orbitron font-bold">1,247</div>
+                                <div className="text-2xl font-orbitron font-bold">{systemStatus.active_agents}</div>
                                 <div className="text-[10px] text-white/50 uppercase tracking-wider">Active Agents</div>
                             </div>
                         </Card>
                     </div>
+                    
+                    {/* History Button */}
+                    <Button variant="secondary" className="w-full" onClick={fetchHistory}>
+                        VIEW SCAN HISTORY
+                    </Button>
                 </div>
 
                 {/* Middle Column: Visualization */}
@@ -305,9 +390,10 @@ export default function Dashboard() {
                         </div>
                         <div className="mt-6 space-y-3">
                             {[
-                                { label: "Sentinel", status: "Active", color: "text-neon-orchid" },
-                                { label: "Oracle", status: "Standby", color: "text-electric-cyan" },
-                                { label: "Midnight", status: "Offline", color: "text-amber-warning" }
+                                { label: "Sentinel", status: systemStatus.sentinel, color: "text-neon-orchid" },
+                                { label: "Oracle", status: systemStatus.oracle, color: "text-electric-cyan" },
+                                { label: "Hydra", status: systemStatus.hydra, color: "text-plasma-pink" },
+                                { label: "Midnight", status: systemStatus.midnight, color: "text-amber-warning" }
                             ].map((agent, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-xs font-mono border-b border-white/5 pb-2 last:border-0">
                                     <span className={agent.color}>{agent.label}</span>
@@ -321,6 +407,39 @@ export default function Dashboard() {
 
             {/* Overlays */}
             <HyperspaceTransition isActive={scanState === "VERDICT"} />
+            
+            {/* History Modal */}
+            <AnimatePresence>
+                {showHistory && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <Card className="w-full max-w-2xl max-h-[80vh] flex flex-col bg-obsidian-core border-neon-orchid/50 relative overflow-hidden">
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                                <h3 className="font-orbitron font-bold text-xl text-white">SCAN HISTORY</h3>
+                                <Button variant="secondary" className="!p-2 rounded-full" onClick={() => setShowHistory(false)}>
+                                    <Shield className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                                {scanHistory.length === 0 ? (
+                                    <div className="text-center text-white/50 font-mono">No scans recorded yet.</div>
+                                ) : (
+                                    scanHistory.map((scan) => (
+                                        <div key={scan.task_id} className="p-4 rounded-lg bg-white/5 border border-white/10 flex justify-between items-center hover:bg-white/10 transition-colors cursor-pointer" onClick={() => router.push(`/verdict?status=${scan.verdict}&taskId=${scan.task_id}`)}>
+                                            <div>
+                                                <div className="text-xs text-white/50 font-mono mb-1">{new Date(scan.timestamp).toLocaleString()}</div>
+                                                <div className="text-sm text-white font-mono truncate max-w-[300px]">{scan.policy_id || "Transaction Scan"}</div>
+                                            </div>
+                                            <div className={`px-3 py-1 rounded text-xs font-bold ${scan.verdict === "SAFE" ? "bg-electric-cyan/20 text-electric-cyan" : "bg-neon-orchid/20 text-neon-orchid"}`}>
+                                                {scan.verdict || "UNKNOWN"}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }

@@ -51,10 +51,11 @@ function ShieldModel({ color }: { color: string }) {
 
 interface ThreatProofCardProps {
     verdict: "SAFE" | "DANGER" | "WARNING";
+    proofData?: any;
     onClose: () => void;
 }
 
-export const ThreatProofCard = ({ verdict, onClose }: ThreatProofCardProps) => {
+export const ThreatProofCard = ({ verdict, proofData, onClose }: ThreatProofCardProps) => {
     const isDanger = verdict === "DANGER";
     const isWarning = verdict === "WARNING";
     const color = isDanger ? "#FF006E" : (isWarning ? "#FFD700" : "#00F5FF"); // Gold for WARNING
@@ -92,12 +93,12 @@ export const ThreatProofCard = ({ verdict, onClose }: ThreatProofCardProps) => {
 
                         <div className="space-y-4 font-mono text-sm">
                             <div className="flex justify-between border-b border-white/10 pb-2">
-                                <span className="text-white/50">Incident ID</span>
-                                <span className="text-white">0xF7A2C931...</span>
+                                <span className="text-white/50">Proof ID</span>
+                                <span className="text-white">{proofData?.proof_id || "PENDING..."}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-white/50">Timestamp</span>
-                                <span className="text-white">2025-01-30 14:23:07 UTC</span>
+                                <span className="text-white">{proofData?.signatures?.[0]?.timestamp || "N/A"}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-white/50">Verdict</span>
@@ -106,12 +107,12 @@ export const ThreatProofCard = ({ verdict, onClose }: ThreatProofCardProps) => {
                                 </span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
-                                <span className="text-white/50">Agent Cost</span>
-                                <span className="text-amber-warning">1.0 ₳</span>
+                                <span className="text-white/50">Merkle Root</span>
+                                <span className="text-amber-warning truncate max-w-[150px]">{proofData?.merkle_root || "Calculating..."}</span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
-                                <span className="text-white/50">Evidence Hash</span>
-                                <span className="text-white truncate max-w-[150px]">Qm...7x9 (IPFS)</span>
+                                <span className="text-white/50">ZK Proof</span>
+                                <span className="text-white truncate max-w-[150px]">{proofData?.zk_proof || "Verifying..."}</span>
                             </div>
                         </div>
 
