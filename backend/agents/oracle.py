@@ -32,8 +32,12 @@ class BaseAgent:
 
     def init_blockfrost(self):
         """Initialize Blockfrost API client"""
-        from blockfrost import BlockFrostApi
-        return BlockFrostApi("preproduDheFnsnBxApBxdqkkpnoHLelIefGX7T")
+        from blockfrost import BlockFrostApi, ApiUrls
+        # Using pre-production network with fresh API key
+        return BlockFrostApi(
+            project_id="preprod99ILsNJwp7AtN1sGgf9f7g7BrFDnCPrg",
+            base_url=ApiUrls.preprod.value
+        )
 
     async def verify_payment(self, escrow_tx):
         """ZERO TRUST - Check escrow includes our DID + cost"""
@@ -56,9 +60,15 @@ class BlockScanner(BaseAgent):
             latest_block = await asyncio.get_event_loop().run_in_executor(
                 None, self.blockfrost.block_latest
             )
-            mainnet_tip = latest_block["height"]
+
+            # Handle Blockfrost response (could be dict or object)
+            if isinstance(latest_block, dict):
+                mainnet_tip = latest_block.get("height")
+            else:
+                mainnet_tip = getattr(latest_block, 'height', 0)
+
             user_tip = chain_state["user_tip"]
-            delta = abs(mainnet_tip - user_tip)
+            delta = abs(int(mainnet_tip) - int(user_tip))
             self.explanation = f"Block tip difference: {delta} blocks"
             risk_score = 0.9 if delta > 5 else 0.1
             return {"risk": risk_score, "evidence": self.explanation}
