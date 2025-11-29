@@ -1,9 +1,10 @@
+
 import React, { useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, MeshDistortMaterial } from "@react-three/drei";
+import { Float } from "@react-three/drei";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { X, Download, Share2 } from "lucide-react";
+import { X, Download, Share2, Shield } from "lucide-react";
 import { Mesh } from "three";
 
 function ShieldModel({ color }: { color: string }) {
@@ -11,22 +12,37 @@ function ShieldModel({ color }: { color: string }) {
 
     useFrame((state) => {
         if (meshRef.current) {
-            meshRef.current.rotation.y += 0.01;
-            meshRef.current.rotation.x = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.2;
+            meshRef.current.rotation.y += 0.005;
+            meshRef.current.rotation.x = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.1;
         }
     });
 
     return (
         <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
             <mesh ref={meshRef}>
-                <icosahedronGeometry args={[2.5, 0]} />
-                <MeshDistortMaterial
+                <icosahedronGeometry args={[2.2, 0]} />
+                <meshPhysicalMaterial
                     color={color}
                     emissive={color}
-                    emissiveIntensity={0.5}
+                    emissiveIntensity={2}
+                    roughness={0.1}
+                    metalness={0.8}
+                    clearcoat={1}
+                    clearcoatRoughness={0.1}
                     wireframe
-                    distort={0.3}
-                    speed={2}
+                />
+            </mesh>
+            {/* Inner Core */}
+            <mesh scale={0.5}>
+                <dodecahedronGeometry args={[1.5, 0]} />
+                <meshPhysicalMaterial
+                    color="#ffffff"
+                    emissive={color}
+                    emissiveIntensity={0.5}
+                    transparent
+                    opacity={0.5}
+                    roughness={0}
+                    metalness={1}
                 />
             </mesh>
         </Float>
@@ -34,12 +50,14 @@ function ShieldModel({ color }: { color: string }) {
 }
 
 interface ThreatProofCardProps {
+    verdict: "SAFE" | "DANGER" | "WARNING";
     onClose: () => void;
-    verdict: "SAFE" | "DANGER";
 }
 
-export const ThreatProofCard: React.FC<ThreatProofCardProps> = ({ onClose, verdict }) => {
-    const color = verdict === "SAFE" ? "#00F5FF" : "#FF006E";
+export const ThreatProofCard = ({ verdict, onClose }: ThreatProofCardProps) => {
+    const isDanger = verdict === "DANGER";
+    const isWarning = verdict === "WARNING";
+    const color = isDanger ? "#FF006E" : (isWarning ? "#FFD700" : "#00F5FF"); // Gold for WARNING
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -83,8 +101,8 @@ export const ThreatProofCard: React.FC<ThreatProofCardProps> = ({ onClose, verdi
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
                                 <span className="text-white/50">Verdict</span>
-                                <span className={verdict === "SAFE" ? "text-electric-cyan" : "text-neon-orchid"}>
-                                    {verdict === "SAFE" ? "VERIFIED_SAFE" : "UNSAFE_FORK"}
+                                <span className={isDanger ? "text-neon-orchid" : isWarning ? "text-amber-warning" : "text-electric-cyan"}>
+                                    {isDanger ? "UNSAFE_FORK" : isWarning ? "POTENTIAL_RISK" : "VERIFIED_SAFE"}
                                 </span>
                             </div>
                             <div className="flex justify-between border-b border-white/10 pb-2">
@@ -122,3 +140,4 @@ export const ThreatProofCard: React.FC<ThreatProofCardProps> = ({ onClose, verdi
         </div>
     );
 };
+

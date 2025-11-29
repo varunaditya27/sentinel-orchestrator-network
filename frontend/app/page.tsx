@@ -1,209 +1,168 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useRef } from "react";
+import Link from "next/link";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { MatrixTerminal } from "@/components/MatrixTerminal";
-import { RadarScan } from "@/components/RadarScan";
-import { VerdictScreen } from "@/components/VerdictScreen";
-import { ThreatProofCard } from "@/components/ThreatProofCard";
-import { AgentEconomy } from "@/components/AgentEconomy";
-import { Shield, Activity, Globe } from "lucide-react";
+import { SwarmCanvas } from "@/components/SwarmCanvas";
+import { Shield, ArrowRight, Lock, Users, Hexagon } from "lucide-react";
 
-// Mock Data
-const MOCK_LOGS = [
-  { id: "1", agent: "SENTINEL", message: "Analyzing OpCodes... Protocol V3 Compliant.", type: "info", timestamp: Date.now() },
-  { id: "2", agent: "SENTINEL", message: "ALERT. Transaction lacks Validity Interval (TTL).", type: "warning", timestamp: Date.now() + 500 },
-  { id: "3", agent: "SENTINEL", message: "@ORACLE, I need a Network Fork Check. Offer: 1.0 ADA.", type: "action", timestamp: Date.now() + 1000 },
-  { id: "4", agent: "ORACLE", message: "Offer Accepted. Scanning 5 Nodes...", type: "info", timestamp: Date.now() + 2000 },
-  { id: "5", agent: "ORACLE", message: "DANGER. User Node is on Minority Fork (30% Weight).", type: "error", timestamp: Date.now() + 3500 },
-  { id: "6", agent: "MIDNIGHT", message: "Generating ZK-Proof of Threat...", type: "info", timestamp: Date.now() + 4000 },
-  { id: "7", agent: "SENTINEL", message: "TRANSACTION BLOCKED.", type: "error", timestamp: Date.now() + 4500 },
-] as const;
+// Tech Decoration Component
+const TechCorner = ({ className }: { className?: string }) => (
+  <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path d="M1 1V6M1 1H6" stroke="currentColor" strokeWidth="2" />
+  </svg>
+);
 
-interface LogEntry {
-  id: string;
-  agent: "SENTINEL" | "ORACLE" | "MIDNIGHT";
-  message: string;
-  type: "info" | "warning" | "error" | "success" | "action";
-  timestamp: number;
-}
+export default function LandingPage() {
+  const containerRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  });
 
-export default function Home() {
-  const [scanState, setScanState] = useState<"IDLE" | "SCANNING" | "VERDICT">("IDLE");
-  const [verdict] = useState<"SAFE" | "DANGER">("DANGER"); // Default to Danger for demo
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [showProof, setShowProof] = useState(false);
-
-  const startScan = () => {
-    setScanState("SCANNING");
-    setLogs([]);
-
-    // Simulate log stream
-    let delay = 0;
-    MOCK_LOGS.forEach((log) => {
-      delay += (log.timestamp - MOCK_LOGS[0].timestamp) + Math.random() * 500;
-      setTimeout(() => {
-        setLogs((prev) => [...prev, { ...log, id: Math.random().toString(), timestamp: Date.now() }]);
-      }, delay);
-    });
-
-    // Show verdict after logs
-    setTimeout(() => {
-      setScanState("VERDICT");
-    }, delay + 1000);
-  };
-
-  const resetScan = () => {
-    setScanState("IDLE");
-    setLogs([]);
-    setShowProof(false);
-  };
+  const yHero = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const opacityHero = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
-    <main className="min-h-screen bg-obsidian-core text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
-      {/* Background Ambience */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#1E2738_0%,#0A0E1A_100%)] -z-20" />
-      <div className="fixed inset-0 bg-[url('/grid.svg')] opacity-10 -z-10" />
+    <main ref={containerRef} className="min-h-[200vh] bg-obsidian-core text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
+      <SwarmCanvas />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12 space-y-12">
-        {/* Header */}
-        <header className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-neon-orchid rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(255,0,110,0.5)]">
-              <Shield className="text-white w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="font-orbitron font-bold text-2xl tracking-wider">SON</h1>
-              <p className="text-xs text-white/50 tracking-[0.2em]">GOVERNANCE GUARD</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-xs font-mono">MAINNET: ONLINE</span>
-            </div>
-          </div>
-        </header>
+      {/* Hero Section */}
+      <section className="h-screen flex flex-col items-center justify-center px-4 relative overflow-hidden">
+        <motion.div
+          style={{ y: yHero, opacity: opacityHero }}
+          className="max-w-6xl mx-auto text-center space-y-8 z-10"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 shadow-[0_0_20px_rgba(255,0,110,0.2)]"
+          >
+            <div className="w-2 h-2 bg-neon-orchid rounded-full animate-pulse shadow-[0_0_10px_#FF006E]" />
+            <span className="text-xs font-mono tracking-[0.3em] text-neon-orchid uppercase">Sentinel Protocol v1.0</span>
+          </motion.div>
 
-        {/* Hero Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[600px]">
-          {/* Left Panel: Interaction */}
-          <div className="lg:col-span-7 flex flex-col justify-center space-y-8">
-            <div className="space-y-4">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-5xl md:text-7xl font-orbitron font-black leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-ghost-white to-white/50"
+          <motion.h1
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, delay: 0.2, ease: "circOut" }}
+            className="text-7xl md:text-9xl font-orbitron font-black leading-[0.9] tracking-tighter mix-blend-overlay"
+          >
+            GOVERNANCE<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/10">GUARD</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-xl md:text-2xl text-white/60 max-w-3xl mx-auto font-light leading-relaxed"
+          >
+            The first autonomous agent swarm protecting the <span className="text-electric-cyan font-medium">Cardano Voltaire</span> era from fork exploits and consensus failures.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="flex flex-col md:flex-row items-center justify-center gap-6 pt-12"
+          >
+            <Link href="/dashboard">
+              <Button className="h-16 px-12 text-lg group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-neon-orchid to-plasma-pink opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <span className="relative z-10 flex items-center gap-2">
+                  Initialize Sentinel
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Button>
+            </Link>
+            <Link href="/about">
+              <Button variant="secondary" className="h-16 px-12 text-lg backdrop-blur-md hover:bg-white/10 border-white/20">
+                Protocol Architecture
+              </Button>
+            </Link>
+          </motion.div>
+        </motion.div>
+
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 1 }}
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        >
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Scroll to Explore</span>
+          <div className="w-[1px] h-12 bg-gradient-to-b from-neon-orchid to-transparent" />
+        </motion.div>
+      </section>
+
+      {/* Features Section */}
+      <section className="min-h-screen py-32 px-4 relative z-20 bg-obsidian-core">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-obsidian-core via-transparent to-obsidian-core" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          >
+            {[
+              {
+                icon: Shield,
+                title: "Fork Detection",
+                desc: "Real-time analysis of block height divergence across 50+ nodes to prevent minority chain signing.",
+                color: "text-neon-orchid",
+                gradient: "from-neon-orchid/20 to-transparent"
+              },
+              {
+                icon: Lock,
+                title: "Replay Protection",
+                desc: "Deep packet inspection of transaction TTL and validity intervals to ensure temporal uniqueness.",
+                color: "text-electric-cyan",
+                gradient: "from-electric-cyan/20 to-transparent"
+              },
+              {
+                icon: Users,
+                title: "Agentic Swarm",
+                desc: "Decentralized marketplace where Sentinels hire Oracles and Midnight ZK-Provers on demand.",
+                color: "text-amber-warning",
+                gradient: "from-amber-warning/20 to-transparent"
+              }
+            ].map((feature, idx) => (
+              <motion.div
+                key={idx}
+                whileHover={{ y: -10 }}
+                className="group relative p-1 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/10 overflow-hidden"
               >
-                SECURE THE<br />
-                <span className="text-neon-orchid drop-shadow-[0_0_15px_rgba(255,0,110,0.5)]">VOLTAIRE ERA</span>
-              </motion.h2>
-              <p className="text-lg text-white/60 max-w-xl">
-                Autonomous agent swarm that detects governance forks, prevents replay attacks, and verifies consensus in real-time.
-              </p>
-            </div>
+                <TechCorner className="absolute top-4 left-4 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <TechCorner className="absolute top-4 right-4 rotate-90 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <Card className="p-1 space-y-4 bg-white/5 border-white/10 backdrop-blur-sm">
-              <div className="p-6 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-mono text-electric-cyan uppercase tracking-wider">Transaction CBOR / Policy ID</label>
-                  <div className="relative group">
-                    <textarea
-                      className="w-full h-32 bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none"
-                      placeholder="84a30081825820..."
-                      disabled={scanState !== "IDLE"}
-                    />
-                    <div className="absolute inset-0 border border-neon-orchid/0 group-hover:border-neon-orchid/20 pointer-events-none rounded-lg transition-colors" />
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+
+                <div className="relative h-full bg-obsidian-core/90 rounded-[22px] p-8 flex flex-col gap-6">
+                  <div className={`w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center ${feature.color} shadow-[0_0_30px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-500`}>
+                    <feature.icon className="w-8 h-8" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-orbitron font-bold mb-3 group-hover:text-white transition-colors">{feature.title}</h3>
+                    <p className="text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">{feature.desc}</p>
+                  </div>
+
+                  <div className="mt-auto pt-6 border-t border-white/5 flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-white/30 group-hover:text-white/50">
+                    <Hexagon className="w-3 h-3" />
+                    <span>Module Active</span>
                   </div>
                 </div>
-
-                <Button
-                  className="w-full h-16 text-lg"
-                  onClick={startScan}
-                  disabled={scanState !== "IDLE"}
-                  isLoading={scanState === "SCANNING"}
-                >
-                  {scanState === "IDLE" ? "INITIATE GOVERNANCE SCAN" : "SCANNING NETWORK..."}
-                </Button>
-              </div>
-            </Card>
-          </div>
-
-          {/* Right Panel: Visualization */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            {/* Status Cards */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="p-4 flex items-center gap-4 bg-electric-cyan/5 border-electric-cyan/20">
-                <div className="p-3 rounded-full bg-electric-cyan/10">
-                  <Globe className="w-6 h-6 text-electric-cyan" />
-                </div>
-                <div>
-                  <div className="text-2xl font-orbitron font-bold">98.7%</div>
-                  <div className="text-xs text-white/50">Consensus Health</div>
-                </div>
-              </Card>
-              <Card className="p-4 flex items-center gap-4 bg-plasma-pink/5 border-plasma-pink/20">
-                <div className="p-3 rounded-full bg-plasma-pink/10">
-                  <Activity className="w-6 h-6 text-plasma-pink" />
-                </div>
-                <div>
-                  <div className="text-2xl font-orbitron font-bold">1,247</div>
-                  <div className="text-xs text-white/50">Active Agents</div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Dynamic Content Area */}
-            <div className="flex-1 relative min-h-[400px]">
-              <AnimatePresence mode="wait">
-                {scanState === "IDLE" ? (
-                  <motion.div
-                    key="radar"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="h-full"
-                  >
-                    <RadarScan />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="terminal"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="h-full"
-                  >
-                    <MatrixTerminal logs={logs} isActive={true} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Agent Economy Mini-Vis */}
-            <AgentEconomy />
-          </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
-      </div>
-
-      {/* Overlays */}
-      <AnimatePresence>
-        {scanState === "VERDICT" && !showProof && (
-          <VerdictScreen
-            status={verdict}
-            onReset={resetScan}
-            onViewProof={() => setShowProof(true)}
-          />
-        )}
-        {showProof && (
-          <ThreatProofCard
-            verdict={verdict}
-            onClose={() => setShowProof(false)}
-          />
-        )}
-      </AnimatePresence>
+      </section>
     </main>
   );
 }
