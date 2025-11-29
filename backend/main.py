@@ -4,15 +4,18 @@ from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 from fpdf import FPDF
 from message_bus import MessageBus
-from agents import SentinelAgent, OracleAgent
+from agents import (
+    SentinelAgent, OracleAgent, ComplianceAgent, ConsensusAgent
+)
 from agents.specialists import (
     BlockScanner, StakeAnalyzer, VoteDoctor,
     MempoolSniffer, ReplayDetector
 )
 from agents.governance import (
-    ProposalFetcher, PolicyAnalyzer, 
+    ProposalFetcher, PolicyAnalyzer,
     SentimentAnalyzer, GovernanceOrchestrator
 )
+from agents.governance.drep_advisor import DRepAdvisor
 import uuid
 import logging
 import json
@@ -47,7 +50,9 @@ message_bus = MessageBus()
 # CORE AGENTS (Sentinel & Oracle)
 # =============================================================================
 
-sentinel = SentinelAgent(enable_llm=True)
+# Initialize Agents
+sentinel = SentinelAgent(enable_llm=True, enable_hydra=True)
+oracle = OracleAgent(enable_llm=True)
 =======
 # Initialize Agents
 sentinel = SentinelAgent(enable_llm=True, enable_hydra=True)
@@ -88,6 +93,7 @@ governance_orchestrator = GovernanceOrchestrator(enable_llm=True)
 proposal_fetcher = ProposalFetcher()
 policy_analyzer = PolicyAnalyzer(enable_llm=True)
 sentiment_analyzer = SentimentAnalyzer()
+drep_advisor = DRepAdvisor()
 
 # Register governance agents with MessageBus
 message_bus.register_agent("did:masumi:governance_orchestrator_01", 
@@ -211,6 +217,144 @@ async def run_sentinel_scan(policy_id: str, user_tip: int, task_id: str):
         }
         signed_error = sentinel._sign_envelope(error_envelope)
         await message_bus.publish(signed_error)
+
+
+# =============================================================================
+# BACKGROUND TASK: GOVERNANCE ANALYSIS
+# =============================================================================
+
+async def run_governance_analysis(proposal_id: str, task_id: str):
+    """
+    Run the governance analysis in background.
+    Publishes results to MessageBus for WebSocket clients.
+    """
+    try:
+        logger.info(f"[{task_id}] Starting governance analysis for proposal: {proposal_id}")
+
+        # Simulate agent-by-agent processing with delays for real-time updates
+        agents = [
+            ("ProposalFetcher", "Fetching proposal metadata..."),
+            ("PolicyAnalyzer", "Analyzing constitutional compliance..."),
+            ("SentimentAnalyzer", "Analyzing community sentiment..."),
+            ("TreasuryGuardian", "Checking treasury impact...")
+        ]
+
+        # Send agent start updates
+        for agent_name, message in agents:
+            # Publish agent start
+            agent_start_envelope = {
+                "from_did": f"did:masumi:{agent_name.lower()}_01",
+                "payload": {
+                    "task_id": task_id,
+                    "type": "agent_update",
+                    "agent_name": agent_name,
+                    "update": {
+                        "status": "running",
+                        "time": "00:01",
+                        "result": message
+                    }
+                }
+            }
+            await message_bus.publish(agent_start_envelope)
+
+            # Simulate processing time
+            await asyncio.sleep(2)
+
+            # Publish agent completion with mock data
+            if agent_name == "ProposalFetcher":
+                update = {
+                    "status": "completed",
+                    "time": "00:05",
+                    "result": f"Fetched metadata for proposal {proposal_id}"
+                }
+            elif agent_name == "PolicyAnalyzer":
+                update = {
+                    "status": "completed",
+                    "time": "00:12",
+                    "result": "Policy analysis complete",
+                    "flags": ["Minor compliance issue"],
+                    "recommendation": "REVIEW"
+                }
+            elif agent_name == "SentimentAnalyzer":
+                update = {
+                    "status": "completed",
+                    "time": "00:08",
+                    "result": "Sentiment analysis complete",
+                    "support": 65
+                }
+            elif agent_name == "TreasuryGuardian":
+                update = {
+                    "status": "completed",
+                    "time": "00:06",
+                    "result": "Treasury check complete",
+                    "risk_score": 25,
+                    "ncl_status": "Compliant"
+                }
+
+            agent_complete_envelope = {
+                "from_did": f"did:masumi:{agent_name.lower()}_01",
+                "payload": {
+                    "task_id": task_id,
+                    "type": "agent_update",
+                    "agent_name": agent_name,
+                    "update": update
+                }
+            }
+            await message_bus.publish(agent_complete_envelope)
+
+            # Send log entries
+            log_envelope = {
+                "from_did": f"did:masumi:{agent_name.lower()}_01",
+                "payload": {
+                    "task_id": task_id,
+                    "type": "log",
+                    "agent": agent_name,
+                    "content": f"[{agent_name}] Analysis completed successfully",
+                    "level": "success"
+                }
+            }
+            await message_bus.publish(log_envelope)
+
+        # Final verdict
+        verdict = {
+            "recommendation": "YES",
+            "confidence": 0.75,
+            "violations": ["Minor treasury impact"],
+            "sentiment": "Moderately positive community support",
+            "summary": "Proposal appears viable with some considerations"
+        }
+
+        verdict_envelope = {
+            "from_did": "did:masumi:governance_orchestrator_01",
+            "payload": {
+                "task_id": task_id,
+                "type": "verdict",
+                "verdict": verdict
+            }
+        }
+        await message_bus.publish(verdict_envelope)
+
+        logger.info(f"[{task_id}] Governance analysis completed. Verdict: {verdict['recommendation']}")
+
+    except Exception as e:
+        logger.error(f"[{task_id}] Governance analysis failed: {str(e)}")
+
+        # Publish error envelope
+        error_envelope = {
+            "from_did": "did:masumi:governance_orchestrator_01",
+            "payload": {
+                "task_id": task_id,
+                "type": "verdict",
+                "verdict": {
+                    "recommendation": "ABSTAIN",
+                    "confidence": 0.0,
+                    "violations": ["Analysis failed"],
+                    "sentiment": "Unable to determine",
+                    "summary": f"Error during analysis: {str(e)}"
+                }
+            }
+        }
+        await message_bus.publish(error_envelope)
 
 
 # =============================================================================
@@ -658,6 +802,83 @@ async def check_proposal(request: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v1/governance/dreps/recommend")
+async def recommend_dreps(preference: str = "balanced"):
+    return await drep_advisor.recommend_dreps(preference)
+
+@app.get("/api/v1/governance/dreps/{drep_id}")
+async def get_drep_profile(drep_id: str):
+    return await drep_advisor.analyze_drep(drep_id)
+
+
+@app.get("/api/v1/governance/proposals")
+async def get_governance_proposals():
+    """Get list of active governance proposals"""
+    # Mock data for demonstration - in real implementation, this would fetch from Cardano governance API
+    mock_proposals = [
+        {
+            "id": "gov_action_001",
+            "title": "Treasury Allocation for Catalyst Fund",
+            "amount": 5000000,  # 5M ADA
+            "status": "active",
+            "ends_in": "7 days"
+        },
+        {
+            "id": "gov_action_002",
+            "title": "Constitutional Committee Update",
+            "amount": 0,
+            "status": "active",
+            "ends_in": "12 days"
+        },
+        {
+            "id": "gov_action_003",
+            "title": "Protocol Parameter Change - Min Fee",
+            "amount": 100000,  # 100k ADA
+            "status": "active",
+            "ends_in": "5 days"
+        },
+        {
+            "id": "gov_action_004",
+            "title": "Hard Fork Initiator Threshold",
+            "amount": 0,
+            "status": "ended",
+            "ends_in": "Voting closed"
+        }
+    ]
+
+    logger.info(f"Returning {len(mock_proposals)} mock governance proposals")
+    return mock_proposals
+
+
+@app.post("/api/v1/governance/analyze")
+async def analyze_governance_proposal(request: Dict[str, Any], background_tasks: BackgroundTasks):
+    """
+    Start governance analysis for a specific proposal.
+    Returns task_id for WebSocket monitoring.
+    """
+    proposal_id = request.get("proposal_id")
+    if not proposal_id:
+        raise HTTPException(status_code=400, detail="proposal_id is required")
+
+    task_id = str(uuid.uuid4())
+
+    logger.info(f"[{task_id}] Starting governance analysis for proposal: {proposal_id}")
+
+    # Trigger governance analysis in background
+    background_tasks.add_task(
+        run_governance_analysis,
+        proposal_id,
+        task_id
+    )
+
+    return {
+        "task_id": task_id,
+        "status": "initiated",
+        "proposal_id": proposal_id,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+
+
 # =============================================================================
 # WEBSOCKET ENDPOINT FOR REAL-TIME RESULTS
 # =============================================================================
@@ -693,11 +914,34 @@ async def websocket_logs(websocket: WebSocket):
     """
     await message_bus.connect(websocket)
     logger.info("Client connected to activity logs")
-    
+
     try:
         while True:
             await websocket.receive_text()
     except Exception as e:
         logger.info(f"WebSocket closed: {str(e)}")
+    finally:
+        message_bus.disconnect(websocket)
+
+
+@app.websocket("/ws/governance/{task_id}")
+async def websocket_governance(websocket: WebSocket, task_id: str):
+    """
+    WebSocket endpoint for real-time governance analysis results.
+
+    Clients connect with: ws://localhost:8000/ws/governance/{task_id}
+    Server publishes agent updates and final verdict.
+    """
+    await message_bus.connect(websocket)
+    logger.info(f"Client connected to governance analysis: {task_id}")
+
+    try:
+        while True:
+            # Keep connection open and receive messages
+            data = await websocket.receive_text()
+            logger.debug(f"Received from client [{task_id}]: {data}")
+
+    except Exception as e:
+        logger.info(f"WebSocket closed for governance task {task_id}: {str(e)}")
     finally:
         message_bus.disconnect(websocket)

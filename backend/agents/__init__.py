@@ -53,6 +53,8 @@ from .llm_config import (
 
 from .sentinel import SentinelAgent, ComplianceStatus
 from .oracle import OracleAgent
+from .compliance import ComplianceAgent, RiskModifier
+from .consensus import ConsensusAgent, ConsensusStatus
 
 # =============================================================================
 # PUBLIC API
@@ -63,7 +65,7 @@ __all__ = [
     "BaseAgent",
     "Vote",
     "Severity",
-    
+
     # LLM Configuration
     "AgentLLM",
     "GEMINI_API_KEY",
@@ -71,12 +73,15 @@ __all__ = [
     "LLM_ENABLED",
     "init_gemini_client",
     "get_gemini_model",
-    
+
     # Agents
     "SentinelAgent",
     "OracleAgent",
-    
+    "ComplianceAgent",
+    "ConsensusAgent",
+
     # Enums
     "ComplianceStatus",
+    "RiskModifier",
+    "ConsensusStatus",
 ]
-
