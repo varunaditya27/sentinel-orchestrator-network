@@ -1,0 +1,44 @@
+{
+  "_comment": "Hydra Node Configuration for SON Settlement Layer",
+  "_description": "Configuration for Hydra head nodes in devnet mode",
+  "_based_on": "https://hydra.family/head-protocol/docs/getting-started/demo/",
+  "_network": "preview-testnet",
+
+  "nodeId": "alice",
+  "api": {
+    "host": "0.0.0.0",
+    "port": 4001
+  },
+  "monitoring": {
+    "host": "0.0.0.0",
+    "port": 6001
+  },
+  "hydraVerificationKeys": [],
+  "hydraSigningKeys": [],
+  "cardanoVerificationKeys": [],
+  "cardanoSigningKeys": [],
+  "ledger": {
+    "protocolParameters": {},
+    "testnetMagic": 2
+  },
+  "peers": [
+    {
+      "hostname": "hydra-node-bob",
+      "port": 5002,
+      "id": "bob"
+    },
+    {
+      "hostname": "hydra-node-carol",
+      "port": 5003,
+      "id": "carol"
+    }
+  ],
+  "network": {
+    "magic": 2,
+    "socketPath": "/ipc/node.socket"
+  },
+  "logging": {
+    "level": "Info",
+    "format": "JSON"
+  }
+}

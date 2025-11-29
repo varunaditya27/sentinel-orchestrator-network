@@ -1,40 +1,20 @@
-# =============================================================================
-# Sentinel Orchestrator Network (SON) - Hydra Node Docker Compose
-# =============================================================================
-#
-# This file configures a standalone Hydra node for the SON L2 consensus layer.
-# Hydra enables ultra-fast off-chain collaboration between agents with
-# sub-second consensus for threat verification and data feed finalization.
-#
-# Owner: Member 3 (The Speed Demon)
-# 
-# Usage:
-#   cd hydra-node
-#   docker-compose up -d
-#
-# Endpoints:
-#   - WebSocket API: ws://localhost:4001
-#
-# Note: Uses devnet mode for hackathon development.
-# =============================================================================
+# Standalone Hydra Settlement Layer for SON
+# No external dependencies - runs completely offline
 
 version: '3.8'
 
 services:
-  hydra-node:
-    image: inputoutput/hydra-node:latest
-    container_name: son-hydra-node
+  hydra-control:
+    build:
+      context: .
+      dockerfile: Dockerfile.hydra_control
+    container_name: son-hydra-control
     ports:
-      - "4001:4001"  # WebSocket API
-      - "4002:4002"  # Hydra P2P
+      - "8085:8085"
     volumes:
-      - ./config.json:/app/config.json
-      - ./ledger:/app/ledger
+      - ./state:/app/state
+      - ./test_vectors:/app/test_vectors
     environment:
-      - HYDRA_NODE_ID=son-hydra-1
-      - HYDRA_NETWORK=preview
-    command: ["--devnet"]
+      - CONTROL_PORT=8085
+    command: ["python", "/app/hydra_control.py", "--server"]
     restart: unless-stopped
-
-volumes:
-  ledger:

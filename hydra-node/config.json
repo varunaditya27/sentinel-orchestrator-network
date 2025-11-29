@@ -1,13 +1,14 @@
 {
   "_comment": "=============================================================================",
   "_description": "Sentinel Orchestrator Network (SON) - Hydra Node Configuration",
-  "_purpose": "Configuration for the Hydra L2 consensus node used by SON agents",
+  "_purpose": "Configuration for the Hydra L2 consensus node used by SON agents with mock mode for hackathon demo",
   "_owner": "Member 3 (The Speed Demon)",
   "_version": "1.0",
   "_comment_end": "=============================================================================",
 
   "node_id": "son-hydra-1",
   "network": "preview",
+  "mock_mode": true,
   "api": {
     "host": "0.0.0.0",
     "port": 4001
@@ -17,5 +18,16 @@
   },
   "peers": [],
   "contestation_period": 60,
-  "hydra_scripts_tx_id": "TODO_PLACEHOLDER"
+  "hydra_scripts_tx_id": "TODO_PLACEHOLDER",
+  "mock_endpoints": {
+    "masumi_node": "http://mock-masumi:8080",
+    "oracle_node": "http://mock-oracle:8081",
+    "sentinel_node": "http://mock-sentinel:8082",
+    "midnight_node": "http://mock-midnight:8083"
+  },
+  "environment_placeholders": {
+    "HYDRA_NODE_ID": "son-hydra-1",
+    "NETWORK": "preview",
+    "PORTS": "4001:4001,4002:4002"
+  }
 }

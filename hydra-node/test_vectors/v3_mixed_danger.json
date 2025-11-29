@@ -1,0 +1,29 @@
+{
+  "session_id": "sess-003",
+  "verdict": "DANGER",
+  "evidence_hash": "sha256:mixed12345678901234567890123456789012345678901234567890123456789012",
+  "agent_collaboration": [
+    {
+      "agent_id": "did:masumi:sentinel_01",
+      "vote": "SAFE",
+      "weight": 0.4,
+      "risk_score": 45
+    },
+    {
+      "agent_id": "did:masumi:oracle_01",
+      "vote": "DANGER",
+      "weight": 0.4,
+      "consensus_hash": "sha256:mixedabcdef123456789012345678901234567890123456789012345678901234"
+    },
+    {
+      "agent_id": "did:midnight:zk_01",
+      "vote": "DANGER",
+      "weight": 0.2,
+      "proof_ref": "zk-proof-mixed-consensus-uuid"
+    }
+  ],
+  "timestamp": "2025-11-29T17:10:00Z",
+  "sentinel_sig": "bW9ja3NpZ25hdHVyZV9zZW50aW5lbF9iYXNlNjRfMw==",
+  "oracle_sig": "bW9ja3NpZ25hdHVyZV9vcmFjbGVfYmFzZTY0XzM=",
+  "midnight_sig": "bW9ja3NpZ25hdHVyZV9taWRuaWdodF9iYXNlNjRfMw=="
+}

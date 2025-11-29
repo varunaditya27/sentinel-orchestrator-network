@@ -1,0 +1,16 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY hydra_control.py .
+COPY test_vectors/ ./test_vectors/
+COPY state/ ./state/
+
+RUN mkdir -p /app/state /app/test_vectors
+
+EXPOSE 8085
+
+CMD ["python", "hydra_control.py", "--server"]

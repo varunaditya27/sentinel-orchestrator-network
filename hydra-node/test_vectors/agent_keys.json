@@ -1,0 +1,11 @@
+{
+  "sentinel": {
+    "public_key": "y19F9p3W3f6cw1bH/ehzTMPpKkSVzNhZYA7nhWfPfdE="
+  },
+  "oracle": {
+    "public_key": "0LU3upaZd3DtJBQ62fudOS/8JNSUugBfsIGGYmxfFac="
+  },
+  "midnight": {
+    "public_key": "KRaL1f4URaJhDuTdmE5ZW5pC7uM12bPL4z1UfC1oZFU="
+  }
+}

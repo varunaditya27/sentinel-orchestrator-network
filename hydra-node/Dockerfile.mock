@@ -1,0 +1,10 @@
+FROM python:3.9-slim
+
+RUN pip install flask
+
+COPY mock_control.py /app/mock_control.py
+COPY config.json /app/config.json
+
+WORKDIR /app
+
+CMD ["python", "mock_control.py"]

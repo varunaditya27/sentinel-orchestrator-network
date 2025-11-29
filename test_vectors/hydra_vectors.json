@@ -1,0 +1,136 @@
+{
+  "_description": "Test vectors for Hydra integration unit and integration tests",
+  "_owner": "Member 3 (The Speed Demon)",
+  "_version": "1.0",
+
+  "vectors": [
+    {
+      "name": "Open Head Basic",
+      "input": {
+        "action": "open_head",
+        "session_id": "sess-001",
+        "participants": ["did:masumi:sentinel_01"],
+        "metadata": {"threshold": 1.0}
+      },
+      "expected_output": {
+        "head_id": "h-0001",
+        "status": "OPEN"
+      }
+    },
+    {
+      "name": "Submit Rejection Order",
+      "input": {
+        "action": "submit_order",
+        "head_id": "h-0001",
+        "order_payload": {
+          "order_type": "REJECTION",
+          "verdict": "DANGER",
+          "evidence_hash": "sha256:abc123",
+          "agent_votes": [
+            {
+              "agent_id": "did:masumi:sentinel_01",
+              "vote": "DANGER",
+              "weight": 1.0
+            }
+          ],
+          "zk_proof_ref": null,
+          "signatures": [
+            {
+              "agent_id": "did:masumi:sentinel_01",
+              "sig": "mock-sig-1"
+            }
+          ]
+        }
+      },
+      "expected_output": {
+        "order_id": "o-001",
+        "status": "COMMITTED"
+      }
+    },
+    {
+      "name": "Attach ZK Proof",
+      "input": {
+        "action": "attach_zk",
+        "head_id": "h-0001",
+        "order_id": "o-001",
+        "zk_proof_ref": "mock-zk-12345"
+      },
+      "expected_output": {
+        "updated": true
+      }
+    },
+    {
+      "name": "Close Head",
+      "input": {
+        "action": "close_head",
+        "head_id": "h-0001"
+      },
+      "expected_output": {
+        "finalized_orders": ["o-001"],
+        "proof_refs": ["mock-zk-12345"]
+      }
+    },
+    {
+      "name": "Get Status",
+      "input": {
+        "action": "get_status",
+        "head_id": "h-0001"
+      },
+      "expected_output": {
+        "status": "CLOSED",
+        "orders_count": 1
+      }
+    },
+    {
+      "name": "Mock Sentinel Message",
+      "input": {
+        "type": "MOCK_SENTINEL_VERDICT",
+        "from": "did:masumi:sentinel_01",
+        "vote": "DANGER",
+        "risk_score": 100,
+        "flags": ["NO_REPLAY_PROTECTION", "MINORITY_FORK"],
+        "evidence_hash": "sha256:abc123def456",
+        "session_id": "sess-001"
+      },
+      "expected_output": {
+        "processed": true,
+        "triggered_order": true
+      }
+    }
+  ],
+
+  "performance_targets": {
+    "open_head_ms": 50,
+    "submit_order_ms": 20,
+    "close_head_ms": 100,
+    "end_to_end_ms": 200,
+    "throughput_orders_per_sec": 300
+  },
+
+  "error_cases": [
+    {
+      "name": "Invalid Head ID",
+      "input": {
+        "action": "get_status",
+        "head_id": "invalid-head"
+      },
+      "expected_error": "HeadNotFoundError"
+    },
+    {
+      "name": "Duplicate Order",
+      "input": {
+        "action": "submit_order",
+        "head_id": "h-0001",
+        "order_payload": {
+          "order_type": "REJECTION",
+          "verdict": "DANGER",
+          "evidence_hash": "sha256:duplicate",
+          "agent_votes": [],
+          "zk_proof_ref": null,
+          "signatures": []
+        }
+      },
+      "expected_error": "OrderRejectedError"
+    }
+  ]
+}

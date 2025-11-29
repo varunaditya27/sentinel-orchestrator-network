@@ -1,0 +1,181 @@
+{
+  "_description": "Test vectors for Hydra settlement layer with CBOR metadata",
+  "_owner": "Member 3 (The Speed Demon)",
+  "_version": "1.0",
+  "_based_on": "Hydra Head Protocol API and L1 Capsule NFT structure",
+
+  "vectors": [
+    {
+      "name": "DANGER Verdict - High Risk Transaction",
+      "file": "v1_danger.json",
+      "verdict_payload": {
+        "session_id": "sess-001",
+        "verdict": "DANGER",
+        "evidence_hash": "sha256:abc123def45678901234567890123456789012345678901234567890123456789012",
+        "agent_collaboration": [
+          {
+            "agent_id": "did:masumi:sentinel_01",
+            "vote": "DANGER",
+            "weight": 0.4,
+            "risk_score": 95
+          },
+          {
+            "agent_id": "did:masumi:oracle_01",
+            "vote": "DANGER",
+            "weight": 0.4,
+            "consensus_hash": "sha256:fedcba09876543210987654321098765432109876543210987654321098765432109"
+          },
+          {
+            "agent_id": "did:midnight:zk_01",
+            "vote": "DANGER",
+            "weight": 0.2,
+            "proof_ref": "zk-proof-high-risk-uuid"
+          }
+        ],
+        "timestamp": "2025-11-29T17:00:00Z",
+        "sentinel_sig": "bW9ja3NpZ25hdHVyZV9zZW50aW5lbF9iYXNlNjQ=",
+        "oracle_sig": "bW9ja3NpZ25hdHVyZV9vcmFjbGVfYmFzZTY0",
+        "midnight_sig": "bW9ja3NpZ25hdHVyZV9taWRuaWdodF9iYXNlNjQ="
+      },
+      "expected_events": [
+        {
+          "event": "HEAD_OPENED",
+          "head_id": "head_1234567890abcdef"
+        },
+        {
+          "event": "ORDER_COMMITTED",
+          "order_id": "order_abcdef1234567890",
+          "cbor_hex": "a11802a164466f726b536869656c64a666766572646963746644414e4745526b65766964656e63655f686173687858207368613235363a61626331323364656634353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031326e6167656e745f636f6c6c61626f726174696f6e8383a26a6167656e745f6964a76469643a6d6173756d693a73656e74696e656c5f303164766f74656644414e47455266776569676874f94066666666666666666666767269736b5f73636f7265185fa36a6167656e745f6964a66469643a6d6173756d693a6f7261636c655f303164766f74656644414e47455266776569676874f940666666666666666666666d636f6e73656e7375735f686173687858207368613235363a6665646362613039383736353433323130393837365433323130393837363534333231303938373635343332313039383736353433323130393837363534333231303938373635343332313039a36a6167656e745f6964a66469643a6d69646e696768743a7a6b5f303164766f74656644414e47455266776569676874f93c006a70726f6f665f726566a77a6b2d70726f6f662d686967682d7269736b2d75756964686974696d657374616d70c0781b323032352d31312d32395431373a30303a30302b30303a30306a73657373696f6e5f69646a736573732d303031687369676e61747572657383d901f5d901f5d901f5"
+        },
+        {
+          "event": "ORDER_FINALIZED",
+          "proof_refs": ["zk-proof-high-risk-uuid"]
+        }
+      ]
+    },
+    {
+      "name": "SAFE Verdict - Low Risk Transaction",
+      "file": "v2_safe.json",
+      "verdict_payload": {
+        "session_id": "sess-002",
+        "verdict": "SAFE",
+        "evidence_hash": "sha256:fedcba09876543210987654321098765432109876543210987654321098765432109",
+        "agent_collaboration": [
+          {
+            "agent_id": "did:masumi:sentinel_01",
+            "vote": "SAFE",
+            "weight": 0.4,
+            "risk_score": 15
+          },
+          {
+            "agent_id": "did:masumi:oracle_01",
+            "vote": "SAFE",
+            "weight": 0.4,
+            "consensus_hash": "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+          },
+          {
+            "agent_id": "did:midnight:zk_01",
+            "vote": "SAFE",
+            "weight": 0.2,
+            "proof_ref": "zk-proof-low-risk-uuid"
+          }
+        ],
+        "timestamp": "2025-11-29T17:05:00Z",
+        "sentinel_sig": "bW9ja3NpZ25hdHVyZV9zZW50aW5lbF9iYXNlNjRfMg==",
+        "oracle_sig": "bW9ja3NpZ25hdHVyZV9vcmFjbGVfYmFzZTY0XzI=",
+        "midnight_sig": "bW9ja3NpZ25hdHVyZV9taWRuaWdodF9iYXNlNjRfMg=="
+      },
+      "expected_events": [
+        {
+          "event": "HEAD_OPENED",
+          "head_id": "head_fedcba0987654321"
+        },
+        {
+          "event": "ORDER_COMMITTED",
+          "order_id": "order_fedcba0987654321",
+          "cbor_hex": "a11802a164466f726b536869656c64a4667665726469637464534146456b65766964656e63655f686173687858207368613235363a66656463626130393837363534333231303938373654333231303938373635343332313039383736353433323130393837363534333231303938373635343332313039383736353433323130396e6167656e745f636f6c6c61626f726174696f6e8383a26a6167656e745f69646d6469643a6d6173756d693a73656e74696e656c5f303164766f74645341464566776569676874f94066666666666666666666767269736b5f73636f7265180fa36a6167656e745f6964a66469643a6d6173756d693a6f7261636c655f303164766f74645341464566776569676874f940666666666666666666666d636f6e73656e7375735f686173687858207368613235363a313233343536373839306162636465663132333435363738393061626364656631323334353637383930616263646566313233343536373839306162636465666a70726f6f665f726566a67a6b2d70726f6f662d6c6f772d7269736b2d75756964686974696d657374616d70c0781b323032352d31312d32395431373a30353a30302b30303a30306a73657373696f6e5f69646a736573732d303032687369676e61747572657383d901f5d901f5d901f5"
+        },
+        {
+          "event": "ORDER_FINALIZED",
+          "proof_refs": ["zk-proof-low-risk-uuid"]
+        }
+      ]
+    },
+    {
+      "name": "DANGER Verdict - Mixed Agent Consensus",
+      "file": "v3_mixed_danger.json",
+      "verdict_payload": {
+        "session_id": "sess-003",
+        "verdict": "DANGER",
+        "evidence_hash": "sha256:mixed12345678901234567890123456789012345678901234567890123456789012",
+        "agent_collaboration": [
+          {
+            "agent_id": "did:masumi:sentinel_01",
+            "vote": "SAFE",
+            "weight": 0.4,
+            "risk_score": 45
+          },
+          {
+            "agent_id": "did:masumi:oracle_01",
+            "vote": "DANGER",
+            "weight": 0.4,
+            "consensus_hash": "sha256:mixedabcdef123456789012345678901234567890123456789012345678901234"
+          },
+          {
+            "agent_id": "did:midnight:zk_01",
+            "vote": "DANGER",
+            "weight": 0.2,
+            "proof_ref": "zk-proof-mixed-consensus-uuid"
+          }
+        ],
+        "timestamp": "2025-11-29T17:10:00Z",
+        "sentinel_sig": "bW9ja3NpZ25hdHVyZV9zZW50aW5lbF9iYXNlNjRfMw==",
+        "oracle_sig": "bW9ja3NpZ25hdHVyZV9vcmFjbGVfYmFzZTY0XzM=",
+        "midnight_sig": "bW9ja3NpZ25hdHVyZV9taWRuaWdodF9iYXNlNjRfMw=="
+      },
+      "expected_events": [
+        {
+          "event": "HEAD_OPENED",
+          "head_id": "head_mixed1234567890"
+        },
+        {
+          "event": "ORDER_COMMITTED",
+          "order_id": "order_mixedabcdef1234",
+          "cbor_hex": "a11802a164466f726b536869656c64a666766572646963746644414e4745526b65766964656e63655f686173687858207368613235363a6d6978656431323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031326e6167656e745f636f6c6c61626f726174696f6e8383a26a6167656e745f6964a76469643a6d6173756d693a73656e74696e656c5f303164766f74645341464566776569676874f94066666666666666666666767269736b5f73636f7265182da36a6167656e745f6964a66469643a6d6173756d693a6f7261636c655f303164766f74656644414e47455266776569676874f940666666666666666666666d636f6e7375735f686173687858207368613235363a6d6978656461626364656631323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435a36a6167656e745f6964a66469643a6d69646e696768743a7a6b5f303164766f74656644414e47455266776569676874f93c006a70726f6f665f726566ac7a6b2d70726f6f662d6d697865642d636f6e73656e7375732d75756964686974696d657374616d70c0781b323032352d31312d32395431373a31303a30302b30303a30306a73657373696f6e5f69646a736573732d303033687369676e61747572657383d901f5d901f5d901f5"
+        },
+        {
+          "event": "ORDER_FINALIZED",
+          "proof_refs": ["zk-proof-mixed-consensus-uuid"]
+        }
+      ]
+    }
+  ],
+
+  "performance_targets": {
+    "open_head_ms": 2000,
+    "commit_verdict_ms": 3000,
+    "finalize_head_ms": 5000,
+    "cbor_encoding_ms": 50,
+    "total_settlement_ms": 10000
+  },
+
+  "api_endpoints_used": {
+    "init_head": "POST /heads - Initialize new Hydra head with participants",
+    "commit_transaction": "POST /heads/{headId}/commits - Commit transaction with CBOR metadata",
+    "close_head": "POST /heads/{headId}/close - Close head and finalize on L1",
+    "get_head_status": "GET /heads/{headId} - Check head status and UTxO"
+  },
+
+  "cbor_metadata_structure": {
+    "policy_id": 674,
+    "metadata_label": "ForkShield",
+    "fields": [
+      "verdict",
+      "evidence_hash",
+      "agent_collaboration",
+      "timestamp",
+      "session_id",
+      "signatures"
+    ]
+  }
+}

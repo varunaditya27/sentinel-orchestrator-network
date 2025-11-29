@@ -1,0 +1,64 @@
+# Hydra Settlement Layer Demo Logs
+# Generated: 2025-11-29
+
+## Complete Settlement Flow
+
+### Step 1: Open Head
+Command: python hydra_control.py --open --session-id sess-001
+Output:
+{
+  "event": "HEAD_OPENED",
+  "head_id": "h-sess-001",
+  "session_id": "sess-001",
+  "timestamp": "2025-11-29T13:10:45.972631"
+}
+
+### Step 2: Commit Verdict (with CBOR generation)
+Command: python hydra_control.py --commit --session-id sess-001 --payload test_vectors/v1_safe.json --skip-sig-check
+Output:
+{
+  "event": "ORDER_COMMITTED",
+  "order_id": "o-sess-001-0001",
+  "head_id": "h-sess-001",
+  "session_id": "sess-001",
+  "cbor_hex": "a11902d1a163363734a16a466f726b536869656c64a7677665726469637464534146456d65766964656e63655f726f6f7478477368613235363a61626364656631323334353637383930616263646566313233343536373839306162636465663132333435363738393061626364656631323334353637383930616263646566...[truncated for readability]",
+  "idempotency_key": "fe6b2c7d48996d41",
+  "timestamp": "2025-11-29T13:10:52.185686"
+}
+
+### Step 3: Attach ZK Proof
+Command: python hydra_control.py --attach-proof --session-id sess-001 --order-id o-sess-001-0001 --proof-ref zk-proof-safe-transaction-uuid
+Output:
+{
+  "event": "PROOF_ATTACHED",
+  "order_id": "o-sess-001-0001",
+  "session_id": "sess-001",
+  "proof_ref": "zk-proof-safe-transaction-uuid",
+  "timestamp": "2025-11-29T13:10:59.451158"
+}
+
+### Step 4: Finalize Head
+Command: python hydra_control.py --finalize --session-id sess-001
+Output:
+{
+  "event": "ORDER_FINALIZED",
+  "head_id": "h-sess-001",
+  "session_id": "sess-001",
+  "finalized_orders": ["o-sess-001-0001"],
+  "proof_refs": ["zk-proof-safe-transaction-uuid"],
+  "timestamp": "2025-11-29T13:11:14.625532"
+}
+
+## CBOR Hex Sample (first 64 chars)
+a11902d1a163363734a16a466f726b536869656c64a767766572646963746453414645
+
+## Event Timeline Summary
+1. HEAD_OPENED → Creates h-sess-001
+2. ORDER_COMMITTED → Creates o-sess-001-0001 with CBOR metadata
+3. PROOF_ATTACHED → Attaches zk-proof-safe-transaction-uuid
+4. ORDER_FINALIZED → Closes head with proof references
+
+## Files Created
+- state/heads.json: Head metadata and status
+- state/orders.json: Order details and CBOR hex
+- All data persisted across runs
