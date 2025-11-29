@@ -24,7 +24,10 @@ function VerdictContent() {
     const isWarning = status === "WARNING";
 
     return (
-        <main className="min-h-screen bg-obsidian-core text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 flex flex-col pt-32">
+        <main className="min-h-screen text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 flex flex-col pt-32">
+            {/* Base Background Color */}
+            <div className="fixed inset-0 bg-obsidian-core -z-50" />
+
             {/* Background Effects */}
             <div className={`fixed inset-0 transition-colors duration-1000 ${isDanger ? "bg-red-950/20" : isWarning ? "bg-amber-950/20" : "bg-electric-cyan/10"
                 }`} />

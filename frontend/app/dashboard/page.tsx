@@ -95,14 +95,17 @@ export default function Dashboard() {
     };
 
     return (
-        <main className="min-h-screen bg-obsidian-core text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 pt-24 pb-8 px-4 md:px-8">
+        <main className="min-h-screen text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 pt-24 pb-8 px-4 md:px-8">
+            {/* Base Background Color */}
+            <div className="fixed inset-0 bg-obsidian-core -z-50" />
+
             {/* HUD Grid Background */}
             <div className="fixed inset-0 bg-[linear-gradient(rgba(0,245,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,245,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] -z-10" />
             <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0)_0%,rgba(0,0,0,0.8)_100%)] -z-10" />
             <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-0" />
 
             {/* Subtle Solution BG Overlay for "Safe" vibes (always present but subtle) */}
-            <div className="fixed inset-0 bg-[url('/solution-bg.png')] bg-cover bg-center opacity-[0.02] mix-blend-screen pointer-events-none -z-5" />
+            <div className="fixed inset-0 bg-[url('/solution-bg.png')] bg-cover bg-center opacity-[0.05] mix-blend-screen pointer-events-none -z-5" />
 
             {/* Dashboard Grid */}
             <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-8rem)]">

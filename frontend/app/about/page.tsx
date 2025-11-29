@@ -25,7 +25,10 @@ export default function AboutPage() {
     const scaleHero = useTransform(scrollYProgress, [0, 0.2], [1, 0.9]);
 
     return (
-        <main ref={containerRef} className="min-h-[300vh] bg-obsidian-core text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
+        <main ref={containerRef} className="min-h-[300vh] text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
+            {/* Base Background Color */}
+            <div className="fixed inset-0 bg-obsidian-core -z-50" />
+
             {/* Fixed Background */}
             <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#1E2738_0%,#0A0E1A_100%)] -z-20" />
             <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]" />
