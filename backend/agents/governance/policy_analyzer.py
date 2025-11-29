@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from dotenv import load_dotenv
 
 try:
     import google.generativeai as genai
@@ -51,9 +52,12 @@ These rules are derived from the Cardano Constitution (simplified).
     def __init__(self):
         self.logger = logging.getLogger("SON.PolicyAnalyzer")
         
+        # Load environment variables from .env file
+        load_dotenv()
+        
         # Initialize Gemini
         if GEMINI_AVAILABLE:
-            api_key = os.getenv("GEMINI_API_KEY")
+            api_key = os.getenv("GOOGLE_API_KEY")
             if api_key:
                 genai.configure(api_key=api_key)
                 self.model = genai.GenerativeModel(
@@ -66,7 +70,7 @@ These rules are derived from the Cardano Constitution (simplified).
                 self.logger.info("PolicyAnalyzer initialized with Gemini")
             else:
                 self.model = None
-                self.logger.warning("GEMINI_API_KEY not set")
+                self.logger.warning("GOOGLE_API_KEY not set")
         else:
             self.model = None
             self.logger.warning("google-generativeai not installed")

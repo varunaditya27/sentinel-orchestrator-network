@@ -35,7 +35,7 @@ load_dotenv()
 # LLM CONFIGURATION
 # =============================================================================
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 LLM_ENABLED = os.getenv("LLM_ENABLED", "true").lower() == "true"
 
@@ -53,7 +53,7 @@ def init_gemini_client() -> bool:
         return False
     
     if not GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY not set in environment. LLM features disabled.")
+        logger.warning("GOOGLE_API_KEY not set in environment. LLM features disabled.")
         return False
     
     if not LLM_ENABLED:

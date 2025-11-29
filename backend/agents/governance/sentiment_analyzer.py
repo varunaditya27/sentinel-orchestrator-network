@@ -9,6 +9,7 @@ import httpx
 import logging
 from typing import Dict
 from dataclasses import dataclass
+from dotenv import load_dotenv
 
 @dataclass
 class SentimentResult:
@@ -25,6 +26,10 @@ class SentimentAnalyzer:
     
     def __init__(self):
         self.logger = logging.getLogger("SON.SentimentAnalyzer")
+        
+        # Load environment variables from .env file
+        load_dotenv()
+        
         self.blockfrost_url = os.getenv(
             "BLOCKFROST_API_URL",
             "https://cardano-preprod.blockfrost.io/api"

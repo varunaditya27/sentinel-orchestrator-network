@@ -2,11 +2,20 @@ from fastapi import FastAPI, WebSocket, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from message_bus import MessageBus
 from agents import SentinelAgent, OracleAgent
+from agents.specialists import (
+    BlockScanner, StakeAnalyzer, VoteDoctor,
+    MempoolSniffer, ReplayDetector
+)
+from agents.governance import (
+    ProposalFetcher, PolicyAnalyzer, 
+    SentimentAnalyzer, GovernanceOrchestrator
+)
 import uuid
 import logging
 import json
 import base64
 from datetime import datetime
+from typing import Dict, Any
 
 # Initialize Logging
 logging.basicConfig(level=logging.INFO)
@@ -15,25 +24,77 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI
 app = FastAPI(
     title="Sentinel Orchestrator Network (SON)",
-    description="Blockchain security scanning with Sentinel & Oracle agents",
-    version="1.0.0"
+    description="Blockchain security scanning with Sentinel & Oracle agents + Governance Analysis",
+    version="2.0.0"
 )
 
 # Initialize MessageBus
 message_bus = MessageBus()
 
-# Initialize Agents
+# =============================================================================
+# CORE AGENTS (Sentinel & Oracle)
+# =============================================================================
+
 sentinel = SentinelAgent(enable_llm=True)
 oracle = OracleAgent(enable_llm=True)
 
 # Connect agents to each other
 sentinel.set_oracle(oracle)
 
-# Register agents with MessageBus
+# Register core agents with MessageBus
 message_bus.register_agent("did:masumi:sentinel_01", sentinel.get_public_key_b64())
 message_bus.register_agent("did:masumi:oracle_01", oracle.get_public_key_b64())
 
-logger.info("✅ Sentinel and Oracle agents initialized and connected")
+logger.info("✅ Core agents initialized: Sentinel & Oracle")
+
+# =============================================================================
+# SPECIALIST AGENTS (Run in parallel within Oracle)
+# =============================================================================
+# Note: Specialist agents are instantiated within Oracle.process()
+# They don't need separate registration unless running as independent microservices
+
+specialist_agents = {
+    "BlockScanner": BlockScanner,
+    "StakeAnalyzer": StakeAnalyzer,
+    "VoteDoctor": VoteDoctor,
+    "MempoolSniffer": MempoolSniffer,
+    "ReplayDetector": ReplayDetector,
+}
+logger.info(f"✅ Specialist agents available: {list(specialist_agents.keys())}")
+
+# =============================================================================
+# GOVERNANCE AGENTS
+# =============================================================================
+
+governance_orchestrator = GovernanceOrchestrator(enable_llm=True)
+proposal_fetcher = ProposalFetcher()
+policy_analyzer = PolicyAnalyzer(enable_llm=True)
+sentiment_analyzer = SentimentAnalyzer()
+
+# Register governance agents with MessageBus
+message_bus.register_agent("did:masumi:governance_orchestrator_01", 
+                          governance_orchestrator.get_public_key_b64() if hasattr(governance_orchestrator, 'get_public_key_b64') else "")
+logger.info("✅ Governance agents initialized: Orchestrator, ProposalFetcher, PolicyAnalyzer, SentimentAnalyzer")
+
+# =============================================================================
+# AGENT REGISTRY
+# =============================================================================
+
+agent_registry = {
+    "core": {
+        "sentinel": sentinel,
+        "oracle": oracle,
+    },
+    "specialists": specialist_agents,
+    "governance": {
+        "governance_orchestrator": governance_orchestrator,
+        "proposal_fetcher": proposal_fetcher,
+        "policy_analyzer": policy_analyzer,
+        "sentiment_analyzer": sentiment_analyzer,
+    }
+}
+
+logger.info(f"✅ Total agents registered: {len(message_bus.get_registered_agents())} in MessageBus")
 
 
 # =============================================================================
@@ -178,22 +239,284 @@ async def scan(request: ScanRequest, background_tasks: BackgroundTasks):
 
 @app.get("/api/v1/agents/info")
 async def agents_info():
-    """Get information about registered agents"""
+    """Get information about all registered agents"""
     return {
-        "sentinel": {
-            "did": "did:masumi:sentinel_01",
-            "role": "orchestrator",
-            "public_key": sentinel.get_public_key_b64()[:20] + "...",
-            "status": "active"
+        "core_agents": {
+            "sentinel": {
+                "did": "did:masumi:sentinel_01",
+                "role": "orchestrator",
+                "public_key": sentinel.get_public_key_b64()[:20] + "...",
+                "status": "active",
+                "description": "Primary orchestrator and protocol compliance checker"
+            },
+            "oracle": {
+                "did": "did:masumi:oracle_01",
+                "role": "blockchain_verifier",
+                "public_key": oracle.get_public_key_b64()[:20] + "...",
+                "status": "active",
+                "description": "Blockchain verifier with specialist coordination",
+                "specialists": list(oracle.specialists.keys()) if hasattr(oracle, 'specialists') else []
+            }
         },
-        "oracle": {
-            "did": "did:masumi:oracle_01",
-            "role": "verifier",
-            "public_key": oracle.get_public_key_b64()[:20] + "...",
-            "status": "active",
-            "specialists": list(oracle.specialists.keys())
+        "specialist_agents": {
+            name: {
+                "class": name,
+                "role": "specialist",
+                "status": "available",
+                "description": f"{name} specialist agent"
+            }
+            for name in specialist_agents.keys()
+        },
+        "governance_agents": {
+            "governance_orchestrator": {
+                "role": "governance_coordinator",
+                "status": "active",
+                "description": "Coordinates governance analysis across all proposals"
+            },
+            "proposal_fetcher": {
+                "role": "data_retriever",
+                "status": "active",
+                "description": "Fetches governance proposals from IPFS"
+            },
+            "policy_analyzer": {
+                "role": "constitutional_analyzer",
+                "status": "active",
+                "description": "Analyzes constitutional compliance of proposals"
+            },
+            "sentiment_analyzer": {
+                "role": "sentiment_analyzer",
+                "status": "active",
+                "description": "Analyzes community sentiment from on-chain votes"
+            }
+        },
+        "total_agents": len(message_bus.get_registered_agents()),
+        "registered_dids": message_bus.get_registered_agents()
+    }
+
+
+@app.get("/api/v1/agents/health")
+async def agents_health():
+    """Get health status of all agents"""
+    health_status = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "message_bus": "healthy",
+        "agents": {}
+    }
+    
+    # Core agents
+    health_status["agents"]["sentinel"] = {
+        "status": "healthy",
+        "type": "core"
+    }
+    health_status["agents"]["oracle"] = {
+        "status": "healthy",
+        "type": "core"
+    }
+    
+    # Specialist agents
+    for name in specialist_agents.keys():
+        health_status["agents"][name.lower()] = {
+            "status": "healthy",
+            "type": "specialist"
+        }
+    
+    # Governance agents
+    health_status["agents"]["governance_orchestrator"] = {
+        "status": "healthy",
+        "type": "governance"
+    }
+    health_status["agents"]["proposal_fetcher"] = {
+        "status": "healthy",
+        "type": "governance"
+    }
+    health_status["agents"]["policy_analyzer"] = {
+        "status": "healthy",
+        "type": "governance"
+    }
+    health_status["agents"]["sentiment_analyzer"] = {
+        "status": "healthy",
+        "type": "governance"
+    }
+    
+    return health_status
+
+
+@app.get("/api/v1/agents/list")
+async def agents_list():
+    """Get list of all available agents by category"""
+    return {
+        "core_agents": {
+            "sentinel": "Sentinel Agent - Orchestrator & Compliance Checker",
+            "oracle": "Oracle Agent - Blockchain Verifier"
+        },
+        "specialist_agents": {
+            name: f"{name} - Specialist Agent"
+            for name in specialist_agents.keys()
+        },
+        "governance_agents": {
+            "governance_orchestrator": "Governance Orchestrator - Coordinates governance analysis",
+            "proposal_fetcher": "Proposal Fetcher - Retrieves proposals from IPFS",
+            "policy_analyzer": "Policy Analyzer - Checks constitutional compliance",
+            "sentiment_analyzer": "Sentiment Analyzer - Analyzes community sentiment"
+        },
+        "summary": {
+            "total_core_agents": 2,
+            "total_specialist_agents": len(specialist_agents),
+            "total_governance_agents": 4,
+            "total_agents": 2 + len(specialist_agents) + 4
         }
     }
+
+
+@app.get("/api/v1/specialist/{specialist_name}")
+async def get_specialist_info(specialist_name: str):
+    """Get information about a specific specialist agent"""
+    specialist_key = specialist_name.title().replace("_", "")
+    
+    if specialist_key not in specialist_agents:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Specialist '{specialist_name}' not found. Available: {list(specialist_agents.keys())}"
+        )
+    
+    agent_class = specialist_agents[specialist_key]
+    return {
+        "name": specialist_name,
+        "class": specialist_key,
+        "status": "active",
+        "description": f"{specialist_name} specialist analyzes blockchain data",
+        "available": True
+    }
+
+
+@app.post("/api/v1/specialist/{specialist_name}/query")
+async def query_specialist(specialist_name: str, request: Dict[str, Any]):
+    """Query a specific specialist agent for analysis"""
+    specialist_key = specialist_name.title().replace("_", "")
+    
+    if specialist_key not in specialist_agents:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Specialist '{specialist_name}' not found"
+        )
+    
+    try:
+        agent_class = specialist_agents[specialist_key]
+        # Instantiate the specialist and run process
+        agent_instance = agent_class()
+        result = agent_instance.process(request.get("data", ""))
+        
+        return {
+            "specialist": specialist_name,
+            "query": request,
+            "result": result,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "status": "completed"
+        }
+    except Exception as e:
+        logging.error(f"Error querying specialist {specialist_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/governance")
+async def governance_status():
+    """Get governance analysis system status"""
+    return {
+        "status": "operational",
+        "agents": {
+            "governance_orchestrator": {
+                "status": "active",
+                "role": "coordinator",
+                "description": "Coordinates governance analysis"
+            },
+            "proposal_fetcher": {
+                "status": "active",
+                "role": "data_retriever",
+                "description": "Fetches proposals from IPFS"
+            },
+            "policy_analyzer": {
+                "status": "active",
+                "role": "compliance_checker",
+                "description": "Checks constitutional compliance"
+            },
+            "sentiment_analyzer": {
+                "status": "active",
+                "role": "sentiment_analyzer",
+                "description": "Analyzes community sentiment"
+            }
+        },
+        "last_analysis": None,
+        "active_analyses": 0,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+
+
+@app.post("/api/v1/governance/analyze")
+async def analyze_governance(request: Dict[str, Any], background_tasks: BackgroundTasks):
+    """
+    Submit governance proposals for analysis.
+    Coordinates ProposalFetcher, PolicyAnalyzer, and SentimentAnalyzer.
+    """
+    task_id = str(uuid.uuid4())
+    
+    try:
+        # Fetch proposals if not provided
+        if "proposals" not in request:
+            fetch_result = proposal_fetcher.process({})
+            proposals = fetch_result.get("proposals", [])
+        else:
+            proposals = request.get("proposals", [])
+        
+        # Analyze policy compliance
+        policy_result = policy_analyzer.process(proposals)
+        
+        # Analyze sentiment
+        sentiment_result = sentiment_analyzer.process(proposals)
+        
+        # Orchestrate final analysis
+        orchestration_result = governance_orchestrator.process({
+            "proposals": proposals,
+            "policy_analysis": policy_result,
+            "sentiment_analysis": sentiment_result
+        })
+        
+        return {
+            "task_id": task_id,
+            "status": "completed",
+            "proposals_analyzed": len(proposals),
+            "policy_analysis": policy_result,
+            "sentiment_analysis": sentiment_result,
+            "orchestration": orchestration_result,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in governance analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/governance/proposal-check")
+async def check_proposal(request: Dict[str, Any]):
+    """Check a specific proposal for constitutional compliance"""
+    try:
+        proposal = request.get("proposal", {})
+        
+        # Check policy compliance
+        policy_result = policy_analyzer.process([proposal])
+        
+        # Analyze sentiment
+        sentiment_result = sentiment_analyzer.process([proposal])
+        
+        return {
+            "proposal_id": proposal.get("id"),
+            "policy_compliance": policy_result,
+            "sentiment": sentiment_result,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error checking proposal: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

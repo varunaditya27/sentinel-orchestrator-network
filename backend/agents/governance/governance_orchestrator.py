@@ -6,6 +6,7 @@ Orchestrates the 3-agent analysis pipeline and aggregates verdicts.
 
 import logging
 from typing import Dict, Any
+from dotenv import load_dotenv
 from .proposal_fetcher import ProposalFetcher
 from .policy_analyzer import PolicyAnalyzer
 from .sentiment_analyzer import SentimentAnalyzer
@@ -17,6 +18,10 @@ class GovernanceOrchestrator:
     
     def __init__(self):
         self.logger = logging.getLogger("SON.GovernanceOrchestrator")
+        
+        # Load environment variables from .env file
+        load_dotenv()
+        
         self.fetcher = ProposalFetcher()
         self.policy = PolicyAnalyzer()
         self.sentiment = SentimentAnalyzer()

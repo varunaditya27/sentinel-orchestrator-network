@@ -196,7 +196,8 @@ class OracleAgent(BaseAgent):
             "mainnet_tip": user_tip,  # In production, fetch from node
             "user_node_tip": user_tip,
             "risk_score": aggregated.overall_risk,
-            "vote": aggregated.vote.value,
+            "verdict": aggregated.vote.value,  # Fixed: was 'vote'
+            "reason": "; ".join(aggregated.findings[:3]) if aggregated.findings else "No significant risks",
             "severity": aggregated.severity.value,
             "findings": aggregated.findings[:5],  # Top 5 findings
             "specialist_summary": {
@@ -254,10 +255,14 @@ class OracleAgent(BaseAgent):
         for name, specialist in self.specialists.items():
             tasks[name] = specialist.scan(target, context)
         
-        # Run all specialists concurrently
+        # Run all specialists concurrently with timeout protection
         results = {}
         try:
-            gathered = await asyncio.gather(*tasks.values(), return_exceptions=True)
+            # FIXED: Added timeout to prevent hanging on slow specialists
+            gathered = await asyncio.wait_for(
+                asyncio.gather(*tasks.values(), return_exceptions=True),
+                timeout=10.0  # 10 second overall timeout
+            )
             
             for name, result in zip(tasks.keys(), gathered):
                 if isinstance(result, Exception):
@@ -278,6 +283,19 @@ class OracleAgent(BaseAgent):
                         "success": result.success,
                     }
                     self.logger.debug(f"{name}: risk={result.risk_score:.2f}, severity={result.severity.value}")
+        
+        except asyncio.TimeoutError:
+            self.logger.error("Specialist execution timeout - some specialists may be unresponsive")
+            # Return partial results with timeout indication
+            for name in tasks.keys():
+                if name not in results:
+                    results[name] = {
+                        "risk_score": 0.15,
+                        "severity": "low",
+                        "findings": ["Specialist timed out"],
+                        "metadata": {"timeout": True},
+                        "success": False,
+                    }
                     
         except Exception as e:
             self.logger.error(f"Specialist execution error: {e}")
@@ -428,11 +446,15 @@ class OracleAgent(BaseAgent):
         evidence_data = f"{policy_id}|{address}|{aggregated.vote.value}|{self.get_timestamp()}"
         evidence_hash = self.generate_hash(evidence_data)
         
+        # Generate reason from findings
+        reason = "; ".join(aggregated.findings[:3]) if aggregated.findings else "No significant risks detected"
+        
         return {
             "agent": "oracle",
             "policy_id": policy_id,
             "address": address,
-            "vote": aggregated.vote.value,
+            "verdict": aggregated.vote.value,  # Fixed: was 'vote'
+            "reason": reason,  # Fixed: added missing field
             "risk_score": aggregated.overall_risk,
             "severity": aggregated.severity.value,
             "confidence": aggregated.confidence,
