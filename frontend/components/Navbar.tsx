@@ -58,6 +58,7 @@ export const Navbar = () => {
                 <div className="flex items-center gap-1">
                     <NavItem href="/" label="Home" icon={Home} isActive={pathname === "/"} />
                     <NavItem href="/dashboard" label="Scanner" icon={LayoutDashboard} isActive={pathname === "/dashboard"} />
+                    <NavItem href="/governance" label="Governance" icon={Shield} isActive={pathname === "/governance"} />
                     <NavItem href="/about" label="Protocol" icon={Info} isActive={pathname === "/about"} />
                 </div>
 

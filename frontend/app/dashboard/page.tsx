@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { MatrixTerminal } from "@/components/MatrixTerminal";
+import { MatrixTerminal, LogEntry } from "@/components/MatrixTerminal";
 import { RadarScan } from "@/components/RadarScan";
 import { AgentEconomy } from "@/components/AgentEconomy";
 import { ComplianceHUD } from "@/components/ComplianceHUD";
@@ -14,28 +14,9 @@ import { HolographicCard } from "@/components/HolographicCard";
 import { ScrambleText } from "@/components/ScrambleText";
 import { Shield, Activity, Globe, Cpu, Wifi, Terminal } from "lucide-react";
 
-// Mock Data - Strictly following PROJECT_IDEA.md narrative
-const MOCK_LOGS = [
-    { id: "1", agent: "SENTINEL", message: "Analyzing OpCodes... 127 Instructions Parsed.", type: "info", timestamp: Date.now() },
-    { id: "2", agent: "SENTINEL", message: "Protocol: Plutus V3 Compliant ✓", type: "success", timestamp: Date.now() + 800 },
-    { id: "3", agent: "SENTINEL", message: "ALERT: Missing Validity Interval (TTL). Vulnerable to Replay.", type: "warning", timestamp: Date.now() + 1500 },
-    { id: "4", agent: "SENTINEL", message: "Action: HIRE_REQUEST @ORACLE-01. Escrow: 1.0 ₳", type: "action", timestamp: Date.now() + 2200 },
-    { id: "5", agent: "ORACLE", message: "OFFER_ACCEPTED. Initiating Multi-Node Scan (5 targets)...", type: "info", timestamp: Date.now() + 3500 },
-    { id: "6", agent: "ORACLE", message: "Scanning: IOG (Mainnet), Emurgo, CF, Coinbase...", type: "info", timestamp: Date.now() + 4500 },
-    { id: "7", agent: "ORACLE", message: "CRITICAL: User Node on Minority Fork (30% Weight).", type: "error", timestamp: Date.now() + 6000 },
-    { id: "8", agent: "ORACLE", message: "Evidence: Block Height Divergence (-30 blocks).", type: "error", timestamp: Date.now() + 6500 },
-    { id: "9", agent: "MIDNIGHT", message: "Generating ZK-Proof of Threat...", type: "info", timestamp: Date.now() + 7500 },
-    { id: "10", agent: "MIDNIGHT", message: "Proof Verified: 0xA7F2... (Privacy Preserved)", type: "success", timestamp: Date.now() + 9000 },
-    { id: "11", agent: "SENTINEL", message: "VERDICT: UNSAFE_FORK. TRANSACTION BLOCKED.", type: "error", timestamp: Date.now() + 9500 },
-] as const;
 
-interface LogEntry {
-    id: string;
-    agent: "SENTINEL" | "ORACLE" | "MIDNIGHT";
-    message: string;
-    type: "info" | "warning" | "error" | "success" | "action";
-    timestamp: number;
-}
+
+
 
 // Tech Decoration Component
 const TechCorner = ({ className }: { className?: string }) => (
@@ -46,11 +27,9 @@ const TechCorner = ({ className }: { className?: string }) => (
 
 export default function Dashboard() {
     const router = useRouter();
-    const [scanState, setScanState] = useState<"IDLE" | "SCANNING" | "VERDICT">("IDLE");
-    const [verdict] = useState<"SAFE" | "DANGER">("DANGER"); // Default to Danger for demo
+    const [scanState, setScanState] = useState<"IDLE" | "SCANNING" | "COMPLETE" | "VERDICT">("IDLE");
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    const [paymentActive, setPaymentActive] = useState(false);
-    const [randomBytes, setRandomBytes] = useState<string[]>([]);
+
     const [inputPayload, setInputPayload] = useState("");
     const [systemStatus, setSystemStatus] = useState({
         sentinel: "Active",
@@ -60,16 +39,17 @@ export default function Dashboard() {
         network_uptime: "99.9%",
         active_agents: 3
     });
+    const [randomBytes, setRandomBytes] = useState<string[]>([]);
+    const [paymentActive, setPaymentActive] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [scanHistory, setScanHistory] = useState<any[]>([]);
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/api/v1/scans/history");
+            const res = await fetch("http://localhost:8000/api/scan-history");
             if (res.ok) {
                 const data = await res.json();
                 setScanHistory(data);
-                setShowHistory(true);
             }
         } catch (e) {
             console.error("Failed to fetch history", e);
@@ -94,7 +74,6 @@ export default function Dashboard() {
     }, []);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRandomBytes(Array.from({ length: 400 }).map(() =>
             Math.floor(Math.random() * 255).toString(16).padStart(2, '0').toUpperCase()
         ));
@@ -103,7 +82,6 @@ export default function Dashboard() {
     useEffect(() => {
         const lastLog = logs[logs.length - 1];
         if (lastLog?.message.includes("HIRE_REQUEST")) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPaymentActive(true);
             const timer = setTimeout(() => setPaymentActive(false), 2000);
             return () => clearTimeout(timer);
@@ -112,14 +90,14 @@ export default function Dashboard() {
 
     const startScan = async () => {
         if (!scanState || scanState === "SCANNING") return;
-        
+
         setScanState("SCANNING");
         setLogs([]);
-        
+
         try {
             // Determine if input is Policy ID (hex, 56 chars) or CBOR
             const isPolicyId = /^[0-9a-fA-F]{56}$/.test(inputPayload.trim());
-            
+
             const payload = {
                 user_tip: 1000,
                 ...(isPolicyId ? { policy_id: inputPayload.trim() } : { tx_cbor: inputPayload.trim() })
@@ -131,17 +109,17 @@ export default function Dashboard() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
-            
+
             const data = await response.json();
             const taskId = data.task_id;
-            
+
             // 2. Connect to WebSocket for results
             const ws = new WebSocket(`ws://localhost:8000/ws/scan/${taskId}`);
-            
+
             ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
                 const payload = message.payload;
-                
+
                 if (payload) {
                     // Add log entry
                     setLogs(prev => [...prev, {
@@ -151,7 +129,7 @@ export default function Dashboard() {
                         type: payload.verdict === "SAFE" ? "success" : "error",
                         timestamp: Date.now()
                     }]);
-                    
+
                     // If verdict received, redirect
                     if (payload.verdict) {
                         setTimeout(() => {
@@ -163,12 +141,12 @@ export default function Dashboard() {
                     }
                 }
             };
-            
+
             ws.onerror = (error) => {
                 console.error("WebSocket error:", error);
                 setScanState("IDLE");
             };
-            
+
         } catch (error) {
             console.error("Scan failed:", error);
             setScanState("IDLE");
@@ -231,13 +209,13 @@ export default function Dashboard() {
                                 ))}
                             </div>
 
-                                <textarea
-                                    className="w-full h-full bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none custom-scrollbar relative z-10 backdrop-blur-sm"
-                                    placeholder="Paste raw transaction CBOR here..."
-                                    disabled={scanState !== "IDLE"}
-                                    value={inputPayload}
-                                    onChange={(e) => setInputPayload(e.target.value)}
-                                />
+                            <textarea
+                                className="w-full h-full bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none custom-scrollbar relative z-10 backdrop-blur-sm"
+                                placeholder="Paste raw transaction CBOR here..."
+                                disabled={scanState !== "IDLE"}
+                                value={inputPayload}
+                                onChange={(e) => setInputPayload(e.target.value)}
+                            />
 
                             {/* Analysis Overlay */}
                             <AnimatePresence>
@@ -311,7 +289,7 @@ export default function Dashboard() {
                             </div>
                         </Card>
                     </div>
-                    
+
                     {/* History Button */}
                     <Button variant="secondary" className="w-full" onClick={fetchHistory}>
                         VIEW SCAN HISTORY
@@ -407,7 +385,7 @@ export default function Dashboard() {
 
             {/* Overlays */}
             <HyperspaceTransition isActive={scanState === "VERDICT"} />
-            
+
             {/* History Modal */}
             <AnimatePresence>
                 {showHistory && (

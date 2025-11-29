@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, CheckCircle, ArrowLeft, Lock, FileText, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { ThreatProofCard } from "@/components/ThreatProofCard";
+import { ThreatProofCard, ProofData } from "@/components/ThreatProofCard";
 import { HolographicCard } from "@/components/HolographicCard";
 import { ScrambleText } from "@/components/ScrambleText";
 
@@ -15,7 +15,7 @@ function VerdictContent() {
     const status = (searchParams.get("status") as "SAFE" | "DANGER" | "WARNING") || "DANGER";
     const taskId = searchParams.get("taskId");
     const [showProof, setShowProof] = useState(false);
-    const [proofData, setProofData] = useState(null);
+    const [proofData, setProofData] = useState<ProofData | null>(null);
 
     const downloadReport = async () => {
         if (!taskId) {
@@ -25,7 +25,7 @@ function VerdictContent() {
         try {
             const response = await fetch(`http://localhost:8000/api/v1/report/${taskId}`);
             if (!response.ok) throw new Error("Report not found");
-            
+
             const blob = await response.blob();
             const pdfBlob = new Blob([blob], { type: "application/pdf" });
             const url = window.URL.createObjectURL(pdfBlob);
@@ -45,7 +45,7 @@ function VerdictContent() {
     const fetchProof = async () => {
         if (!taskId) {
             // Fallback for demo if no task ID (e.g. direct visit)
-            setShowProof(true); 
+            setShowProof(true);
             return;
         }
         try {
@@ -214,13 +214,13 @@ function VerdictContent() {
 
             {/* Proof Overlay */}
             <AnimatePresence>
-                    {showProof && (
-                        <ThreatProofCard
-                            verdict={status}
-                            proofData={proofData}
-                            onClose={() => setShowProof(false)}
-                        />
-                    )}
+                {showProof && (
+                    <ThreatProofCard
+                        verdict={status}
+                        proofData={proofData || undefined}
+                        onClose={() => setShowProof(false)}
+                    />
+                )}
             </AnimatePresence>
         </main>
     );

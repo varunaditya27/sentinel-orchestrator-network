@@ -49,9 +49,16 @@ function ShieldModel({ color }: { color: string }) {
     );
 }
 
+export interface ProofData {
+    proof_id?: string;
+    signatures?: { timestamp: string }[];
+    merkle_root?: string;
+    zk_proof?: string;
+}
+
 interface ThreatProofCardProps {
     verdict: "SAFE" | "DANGER" | "WARNING";
-    proofData?: any;
+    proofData?: ProofData;
     onClose: () => void;
 }
 

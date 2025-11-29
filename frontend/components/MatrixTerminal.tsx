@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "./ui/Card";
 
-interface LogEntry {
+export interface LogEntry {
     id: string;
     agent: "SENTINEL" | "ORACLE" | "MIDNIGHT";
     message: string;
