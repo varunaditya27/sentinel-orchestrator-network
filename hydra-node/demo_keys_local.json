@@ -1,0 +1,15 @@
+{
+  "_NOTE": "This file contains demo private keys - NEVER commit to git!",
+  "sentinel": {
+    "public_key": "y19F9p3W3f6cw1bH/ehzTMPpKkSVzNhZYA7nhWfPfdE=",
+    "private_key": "rpWKn8M8f0idzNHyx6nK10/pi2Fj0qf2L1qjsJe1niA="
+  },
+  "oracle": {
+    "public_key": "0LU3upaZd3DtJBQ62fudOS/8JNSUugBfsIGGYmxfFac=",
+    "private_key": "IVKqQCuZoKB2hZVq+tjfA6OJ9ytSY765vLe5pMQD1+s="
+  },
+  "midnight": {
+    "public_key": "KRaL1f4URaJhDuTdmE5ZW5pC7uM12bPL4z1UfC1oZFU=",
+    "private_key": "MeuFWHN8ojsMmozuM038LvGNUvV8edoBHB149KbtZ8w="
+  }
+}

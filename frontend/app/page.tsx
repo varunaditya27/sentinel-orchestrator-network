@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { SwarmCanvas } from "@/components/SwarmCanvas";
 import { ScrambleText } from "@/components/ScrambleText";
 import { HolographicCard } from "@/components/HolographicCard";
-import { Shield, ArrowRight, Lock, Users, Hexagon } from "lucide-react";
+import { Shield, ArrowRight, Lock, Users, Hexagon, Vote } from "lucide-react";
 
 // Tech Decoration Component
 const TechCorner = ({ className }: { className?: string }) => (
@@ -124,7 +124,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
           >
             {[
               {
@@ -147,34 +147,50 @@ export default function LandingPage() {
                 desc: "Decentralized marketplace where Sentinels hire Oracles and Midnight ZK-Provers on demand.",
                 color: "text-amber-warning",
                 gradient: "from-amber-warning/20 to-transparent"
+              },
+              {
+                icon: Vote,
+                title: "Governance Autopilot",
+                desc: "Analyze 39 proposals in 8 seconds with AI-powered constitutional compliance and sentiment analysis.",
+                color: "text-plasma-pink",
+                gradient: "from-plasma-pink/20 to-transparent",
+                link: "/governance"
               }
-            ].map((feature, idx) => (
-              <HolographicCard
-                key={idx}
-                className="rounded-3xl bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/10 overflow-hidden"
-              >
-                <TechCorner className="absolute top-4 left-4 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <TechCorner className="absolute top-4 right-4 rotate-90 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+            ].map((feature, idx) => {
+              const card = (
+                <HolographicCard
+                  key={idx}
+                  className={`rounded-3xl bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/10 overflow-hidden ${feature.link ? 'cursor-pointer' : ''}`}
+                >
+                  <TechCorner className="absolute top-4 left-4 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <TechCorner className="absolute top-4 right-4 rotate-90 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-                <div className="relative h-full bg-obsidian-core/90 rounded-[22px] p-8 flex flex-col gap-6">
-                  <div className={`w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center ${feature.color} shadow-[0_0_30px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-500`}>
-                    <feature.icon className="w-8 h-8" />
+                  <div className="relative h-full bg-obsidian-core/90 rounded-[22px] p-8 flex flex-col gap-6">
+                    <div className={`w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center ${feature.color} shadow-[0_0_30px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-500`}>
+                      <feature.icon className="w-8 h-8" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-2xl font-orbitron font-bold mb-3 group-hover:text-white transition-colors">{feature.title}</h3>
+                      <p className="text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">{feature.desc}</p>
+                    </div>
+
+                    <div className="mt-auto pt-6 border-t border-white/5 flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-white/30 group-hover:text-white/50">
+                      <Hexagon className="w-3 h-3" />
+                      <span>Module Active</span>
+                    </div>
                   </div>
+                </HolographicCard>
+              );
 
-                  <div>
-                    <h3 className="text-2xl font-orbitron font-bold mb-3 group-hover:text-white transition-colors">{feature.title}</h3>
-                    <p className="text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">{feature.desc}</p>
-                  </div>
-
-                  <div className="mt-auto pt-6 border-t border-white/5 flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-white/30 group-hover:text-white/50">
-                    <Hexagon className="w-3 h-3" />
-                    <span>Module Active</span>
-                  </div>
-                </div>
-              </HolographicCard>
-            ))}
+              return feature.link ? (
+                <Link key={idx} href={feature.link}>
+                  {card}
+                </Link>
+              ) : card;
+            })
           </motion.div>
         </div>
       </section>
