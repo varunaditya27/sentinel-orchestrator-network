@@ -35,7 +35,7 @@ app = FastAPI(
 # Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -610,20 +610,16 @@ async def analyze_governance(request: Dict[str, Any], background_tasks: Backgrou
         # Analyze policy compliance
         policy_result = policy_analyzer.process(proposals)
         
-        # Analyze sentiment for each proposal
+        # Analyze sentiment
         sentiment_results = []
-        for proposal in proposals:
-            proposal_id = proposal.get("id", "")
-            if proposal_id:
-                sentiment = await sentiment_analyzer.analyze(proposal_id)
-                sentiment_results.append({
-                    "proposal_id": proposal_id,
-                    "sentiment": sentiment.sentiment,
-                    "support_percentage": sentiment.support_percentage,
-                    "vote_breakdown": sentiment.vote_breakdown,
-                    "sample_size": sentiment.sample_size
-                })
-        sentiment_result = {"proposals": sentiment_results}
+        for p in proposals:
+            # Assuming proposal has an ID, otherwise skip or use dummy
+            pid = p.get("id") or p.get("proposal_id")
+            if pid:
+                sentiment_results.append(await sentiment_analyzer.analyze(pid))
+        
+        # For orchestration, we might need a summary or list
+        sentiment_result = sentiment_results[0] if sentiment_results else {}
         
         # Orchestrate final analysis
         orchestration_result = drep_helper.process({
@@ -673,15 +669,9 @@ async def check_proposal(request: Dict[str, Any]):
         # Check policy compliance
         policy_result = await policy_analyzer.analyze(proposal)
         
-        # Analyze sentiment using the proposal ID
-        proposal_id = proposal.get("id", "")
-        sentiment = await sentiment_analyzer.analyze(proposal_id)
-        sentiment_result = {
-            "sentiment": sentiment.sentiment,
-            "support_percentage": sentiment.support_percentage,
-            "vote_breakdown": sentiment.vote_breakdown,
-            "sample_size": sentiment.sample_size
-        }
+        # Analyze sentiment (mocked for now as we don't have real on-chain voting data source in this context)
+        # In a real scenario, we'd query a db or indexer
+        sentiment_result = await sentiment_analyzer.analyze(proposal.get("id"))
         
         return {
             "proposal_id": proposal.get("id"),
@@ -751,6 +741,86 @@ async def get_current_treasury_risk():
         logging.error(f"Error getting treasury risk: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# =============================================================================
+# DREP ENDPOINTS
+# =============================================================================
+
+@app.post("/api/v1/drep/consensus")
+async def drep_consensus(request: Dict[str, Any]):
+    """
+    Aggregate intelligence from all governance agents to assist DReps.
+    Combines Policy, Sentiment, and Treasury analysis.
+    """
+    try:
+        proposal_id = request.get("proposal_id")
+        # Mock fetching proposal details if not provided
+        proposal = {
+            "proposal_id": proposal_id,
+            "amount": 10000000000, # 10k ADA
+            "proposer_id": "stake_test...",
+            "metadata": {
+                "title": "DRep Analysis Request",
+                "abstract": "Analysis of governance action.",
+                "rationale": "Requested by DRep."
+            }
+        }
+        
+        # 1. Policy Analysis
+        policy_result = await policy_analyzer.analyze(proposal)
+        
+        # 2. Sentiment Analysis
+        sentiment_result = await sentiment_analyzer.analyze(proposal["proposal_id"])
+        
+        # 3. Treasury Analysis
+        treasury_result = await treasury_guardian.process(proposal)
+        
+        # 4. Aggregate Votes
+        votes = []
+        
+        # Policy Vote
+        votes.append({
+            "agent": "POLICY ANALYZER",
+            "vote": policy_result.recommendation,
+            "confidence": policy_result.confidence,
+            "reason": policy_result.reasoning
+        })
+        
+        # Sentiment Vote
+        votes.append({
+            "agent": "SENTIMENT ORACLE",
+            "vote": "YES" if sentiment_result.support_percentage > 50 else "NO",
+            "confidence": sentiment_result.sample_size / 100 if sentiment_result.sample_size < 100 else 1.0,
+            "reason": f"{sentiment_result.support_percentage:.1f}% Community Support"
+        })
+        
+        # Treasury Vote
+        votes.append({
+            "agent": "TREASURY GUARDIAN",
+            "vote": treasury_result["vote"],
+            "confidence": treasury_result["risk_score"] / 100 if treasury_result["vote"] == "DANGER" else 0.9,
+            "reason": f"Risk Score: {treasury_result['risk_score']}/100"
+        })
+        
+        # Final Verdict Logic
+        yes_votes = len([v for v in votes if v["vote"] == "YES"])
+        no_votes = len([v for v in votes if v["vote"] == "NO" or v["vote"] == "DANGER"])
+        
+        final_verdict = "ABSTAIN"
+        if no_votes > 0:
+            final_verdict = "NO"
+        elif yes_votes >= 2:
+            final_verdict = "YES"
+            
+        return {
+            "finalVerdict": final_verdict,
+            "votes": votes,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in DRep consensus: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # =============================================================================
 # WEBSOCKET ENDPOINT FOR REAL-TIME RESULTS

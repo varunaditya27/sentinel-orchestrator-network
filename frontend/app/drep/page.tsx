@@ -19,19 +19,26 @@ export default function DRepPage() {
         setIsAnalyzing(true);
         setResult(null);
 
-        // Simulate API call delay
-        setTimeout(() => {
-            // Mock Result
-            setResult({
-                finalVerdict: "YES",
-                votes: [
-                    { agent: "POLICY ANALYZER", vote: "YES", confidence: 0.95, reason: "Fully compliant with Constitution v1.2" },
-                    { agent: "SENTIMENT ORACLE", vote: "YES", confidence: 0.82, reason: "85% Community Support on Forum" },
-                    { agent: "TREASURY GUARDIAN", vote: "ABSTAIN", confidence: 0.60, reason: "Amount within limits, but high frequency" }
-                ]
+        try {
+            const response = await fetch("http://localhost:8000/api/v1/drep/consensus", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ proposal_id: input })
             });
+
+            if (!response.ok) throw new Error("Analysis failed");
+            const data = await response.json();
+
+            setResult({
+                finalVerdict: data.finalVerdict,
+                votes: data.votes
+            });
+
+        } catch (error) {
+            console.error(error);
+        } finally {
             setIsAnalyzing(false);
-        }, 2000);
+        }
     };
 
     return (
