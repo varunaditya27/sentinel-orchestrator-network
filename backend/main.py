@@ -11,7 +11,8 @@ from agents.specialists import (
 )
 from agents.governance import (
     ProposalFetcher, PolicyAnalyzer, 
-    SentimentAnalyzer, GovernanceOrchestrator
+    SentimentAnalyzer, GovernanceOrchestrator,
+    TreasuryGuardian
 )
 import uuid
 import logging
@@ -47,8 +48,6 @@ message_bus = MessageBus()
 # CORE AGENTS (Sentinel & Oracle)
 # =============================================================================
 
-sentinel = SentinelAgent(enable_llm=True)
-=======
 # Initialize Agents
 sentinel = SentinelAgent(enable_llm=True, enable_hydra=True)
 oracle = OracleAgent(enable_llm=True)
@@ -84,10 +83,11 @@ logger.info(f"✅ Specialist agents available: {list(specialist_agents.keys())}"
 # GOVERNANCE AGENTS
 # =============================================================================
 
-governance_orchestrator = GovernanceOrchestrator(enable_llm=True)
+governance_orchestrator = GovernanceOrchestrator()
 proposal_fetcher = ProposalFetcher()
-policy_analyzer = PolicyAnalyzer(enable_llm=True)
+policy_analyzer = PolicyAnalyzer()
 sentiment_analyzer = SentimentAnalyzer()
+treasury_guardian = TreasuryGuardian(enable_llm=True)
 
 # Register governance agents with MessageBus
 message_bus.register_agent("did:masumi:governance_orchestrator_01", 
@@ -109,6 +109,7 @@ agent_registry = {
         "proposal_fetcher": proposal_fetcher,
         "policy_analyzer": policy_analyzer,
         "sentiment_analyzer": sentiment_analyzer,
+        "treasury_guardian": treasury_guardian,
     }
 }
 
@@ -655,6 +656,55 @@ async def check_proposal(request: Dict[str, Any]):
         
     except Exception as e:
         logging.error(f"Error checking proposal: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# TREASURY GUARDIAN ENDPOINTS
+# =============================================================================
+
+@app.post("/api/v1/treasury/analyze")
+async def analyze_treasury_proposal(request: Dict[str, Any]):
+    """
+    Analyze a treasury withdrawal proposal for anomalies.
+    """
+    try:
+        result = await treasury_guardian.process(request)
+        return result
+    except Exception as e:
+        logging.error(f"Error in treasury analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/treasury/risk/current")
+async def get_current_treasury_risk():
+    """
+    Get the current treasury risk report (daily summary).
+    """
+    # For MVP, we generate a fresh report based on a mock "current state"
+    # In production, this would return the latest cached daily report
+    try:
+        # Mocking a "current" proposal for the report
+        mock_proposal = {
+            "proposal_id": "gov_action_" + str(uuid.uuid4())[:8],
+            "amount": 50_000_000_000_000, # 50M ADA
+            "proposer_id": "stake_test1...",
+            "metadata": {
+                "title": "Ecosystem Growth Fund",
+                "abstract": "We want 50M ADA to grow the ecosystem.",
+                "rationale": "Trust us."
+            }
+        }
+        result = await treasury_guardian.process(mock_proposal)
+        return {
+            "date": datetime.utcnow().date().isoformat(),
+            "epoch": 450, # Mock epoch
+            "treasury_balance_ada": 1_500_000_000,
+            "active_proposals": 1,
+            "high_risk_proposals": 1 if result["risk_score"] > 50 else 0,
+            "latest_analysis": result
+        }
+    except Exception as e:
+        logging.error(f"Error getting treasury risk: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

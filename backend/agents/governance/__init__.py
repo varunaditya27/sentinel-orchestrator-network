@@ -12,10 +12,12 @@ from .proposal_fetcher import ProposalFetcher
 from .policy_analyzer import PolicyAnalyzer
 from .sentiment_analyzer import SentimentAnalyzer
 from .governance_orchestrator import GovernanceOrchestrator
+from .treasury_guardian import TreasuryGuardian
 
 __all__ = [
     "ProposalFetcher",
     "PolicyAnalyzer",
     "SentimentAnalyzer",
-    "GovernanceOrchestrator"
+    "GovernanceOrchestrator",
+    "TreasuryGuardian"
 ]
