@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Shield, LayoutDashboard, Info, Home, Landmark, Vote } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { WalletConnect } from "@/components/WalletConnect";
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -65,9 +66,12 @@ export const Navbar = () => {
                 </div>
 
                 {/* Status Indicator */}
-                <div className="ml-6 pl-6 border-l border-white/10 hidden md:flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]" />
-                    <span className="text-[10px] font-mono text-white/40 tracking-widest uppercase">Mainnet Active</span>
+                <div className="ml-6 pl-6 border-l border-white/10 hidden md:flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]" />
+                        <span className="text-[10px] font-mono text-white/40 tracking-widest uppercase">Mainnet Active</span>
+                    </div>
+                    <WalletConnect />
                 </div>
             </div>
         </motion.nav>

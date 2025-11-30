@@ -8,16 +8,19 @@ import { HolographicCard } from "@/components/HolographicCard";
 import { ScrambleText } from "@/components/ScrambleText";
 import { TreasuryRiskGauge } from "@/components/TreasuryRiskGauge";
 import { Coins, AlertTriangle, TrendingUp, ShieldAlert, Search } from "lucide-react";
+import { ProtectedPage } from "@/components/ProtectedPage";
 
 export default function TreasuryPage() {
     const [input, setInput] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [result, setResult] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const startAnalysis = async () => {
         if (!input) return;
         setIsAnalyzing(true);
         setResult(null);
+        setError(null);
 
         try {
             // Determine if input is amount or ID
@@ -39,7 +42,10 @@ export default function TreasuryPage() {
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error("Analysis failed");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Analysis failed");
+            }
             const data = await response.json();
 
             setResult({
@@ -51,14 +57,16 @@ export default function TreasuryPage() {
                 reasoning: `Risk Score: ${data.risk_score}. Verdict: ${data.vote}.`
             });
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            setError(error.message || "Analysis failed");
         } finally {
             setIsAnalyzing(false);
         }
     };
 
     return (
+        <ProtectedPage>
         <main className="min-h-screen text-ghost-white overflow-hidden relative selection:bg-amber-500/30 pt-24 pb-8 px-4 md:px-8">
             {/* Base Background */}
             <div className="fixed inset-0 bg-obsidian-core -z-50" />
@@ -108,6 +116,21 @@ export default function TreasuryPage() {
                         </Button>
                     </div>
                 </Card>
+
+                {/* Error Display */}
+                <AnimatePresence>
+                    {error && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="max-w-3xl mx-auto p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-400 font-mono text-sm"
+                        >
+                            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                            {error}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Results Area */}
                 <AnimatePresence mode="wait">
@@ -176,5 +199,6 @@ export default function TreasuryPage() {
                 </AnimatePresence>
             </div>
         </main>
+        </ProtectedPage>
     );
 }

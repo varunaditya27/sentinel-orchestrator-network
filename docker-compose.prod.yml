@@ -1,0 +1,91 @@
+version: "3.8"
+
+services:
+
+  backend:
+    image: 892651572719.dkr.ecr.us-east-1.amazonaws.com/son-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      HYDRA_NODE_URL: "ws://hydra-node:4001"
+      MASUMI_REGISTRY_URL: "http://registry-service:3000"
+      MASUMI_PAYMENT_URL: "http://payment-service:3001"
+    depends_on:
+      - hydra-node
+      - registry-service
+      - payment-service
+
+  frontend:
+    image: 892651572719.dkr.ecr.us-east-1.amazonaws.com/son-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://backend:8000"
+    depends_on:
+      - backend
+
+  registry-service:
+    image: ghcr.io/masumi-network/masumi-registry-service:0.22.0
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@postgres-registry:5432/postgres?schema=public"
+      ADMIN_KEY: "${ADMIN_KEY}"
+      BLOCKFROST_API_KEY_PREPROD: "${BLOCKFROST_API_KEY_PREPROD}"
+      SEED_ONLY_IF_EMPTY: "TRUE"
+    depends_on:
+      postgres-registry:
+        condition: service_healthy
+
+  payment-service:
+    image: ghcr.io/masumi-network/masumi-payment-service:0.22.0
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@postgres-payment:5432/postgres?schema=public"
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY}"
+      ADMIN_KEY: "${ADMIN_KEY}"
+      BLOCKFROST_API_KEY_PREPROD: "${BLOCKFROST_API_KEY_PREPROD}"
+      SEED_ONLY_IF_EMPTY: "TRUE"
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+
+  postgres-registry:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - postgres_data_registry:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-payment:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - postgres_data_payment:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  hydra-node:
+    image: inputoutput/hydra-node:latest
+    ports:
+      - "4001:4001"
+    environment:
+      HYDRA_NODE_ID: "son-hydra-1"
+      HYDRA_NETWORK: "preview"
+    command: ["--devnet"]
+
+volumes:
+  postgres_data_registry:
+  postgres_data_payment:

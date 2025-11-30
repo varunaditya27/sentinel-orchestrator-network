@@ -258,26 +258,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </HolographicCard>
-
-            {/* Step 4: Midnight Proof */}
-            <HolographicCard className="p-8 rounded-3xl bg-black/40 border border-amber-warning/20 backdrop-blur-xl md:translate-y-12">
-              <div className="flex items-start gap-6">
-                <div className="w-12 h-12 rounded-xl bg-amber-warning/10 flex items-center justify-center border border-amber-warning/30 shrink-0">
-                  <Lock className="w-6 h-6 text-amber-warning" />
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-2xl font-orbitron font-bold text-amber-warning">04. ZK-PROOF & SETTLEMENT</h3>
-                  <p className="text-white/70 leading-relaxed">
-                    <strong className="text-white">Midnight</strong> generates a Zero-Knowledge Proof of the threat. The verdict is settled via <span className="text-amber-warning">Hydra</span>, blocking the transaction if unsafe.
-                  </p>
-                  <div className="text-xs font-mono text-white/40 bg-white/5 p-3 rounded border border-white/10">
-                    {`> GEN_ZKP(threat_evidence)`}<br />
-                    {`> VERDICT: DANGER_REPLAY_ATTACK`}<br />
-                    {`> BLOCK_TX()`}
-                  </div>
-                </div>
-              </div>
-            </HolographicCard>
           </div>
         </div>
       </section>

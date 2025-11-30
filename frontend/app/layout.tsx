@@ -27,6 +27,10 @@ import SmoothScroll from "@/components/SmoothScroll";
 import { CustomCursor } from "@/components/CustomCursor";
 import { PageTransition } from "@/components/PageTransition";
 
+import { WalletProvider } from "@/context/WalletContext";
+
+// ... imports
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,13 +41,15 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-obsidian-core text-ghost-white`}
       >
-        <SmoothScroll>
-          <CustomCursor />
-          <Navbar />
-          <PageTransition>
-            {children}
-          </PageTransition>
-        </SmoothScroll>
+        <WalletProvider>
+          <SmoothScroll>
+            <CustomCursor />
+            <Navbar />
+            <PageTransition>
+              {children}
+            </PageTransition>
+          </SmoothScroll>
+        </WalletProvider>
       </body>
     </html>
   );

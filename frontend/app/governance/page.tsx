@@ -7,6 +7,7 @@ import { ScrambleText } from "@/components/ScrambleText";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Shield, FileText, Scale, Users, Search, CheckCircle, XCircle, LucideIcon } from "lucide-react";
+import { ProtectedPage } from "@/components/ProtectedPage";
 
 
 
@@ -38,7 +39,10 @@ export default function GovernancePage() {
                 body: JSON.stringify({ ipfs_hash: input })
             });
 
-            if (!response.ok) throw new Error("Analysis failed");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Analysis failed");
+            }
 
             const data = await response.json();
 
@@ -73,14 +77,15 @@ export default function GovernancePage() {
                 setIsAnalyzing(false);
             }, 5500);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            setLogs(prev => [...prev, { agent: "ORCHESTRATOR", message: "Error: Analysis Failed", status: "error", delay: 0 }]);
+            setLogs(prev => [...prev, { agent: "ORCHESTRATOR", message: `Error: ${error.message || "Analysis Failed"}`, status: "error", delay: 0 }]);
             setIsAnalyzing(false);
         }
     };
 
     return (
+        <ProtectedPage>
         <main className="min-h-screen text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 pt-24 pb-8 px-4 md:px-8">
             {/* Base Background Color */}
             <div className="fixed inset-0 bg-obsidian-core -z-50" />
@@ -212,6 +217,7 @@ export default function GovernancePage() {
                 </AnimatePresence>
             </div>
         </main>
+        </ProtectedPage>
     );
 }
 

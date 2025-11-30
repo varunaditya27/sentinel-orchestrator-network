@@ -63,6 +63,17 @@ class ProposalFetcher:
         Returns:
             ProposalMetadata object with parsed data
         """
+        # Validation
+        if not ipfs_hash:
+            raise ValueError("IPFS Hash is required")
+            
+        if ipfs_hash.startswith("gov_action"):
+            raise ValueError(f"Invalid IPFS Hash: '{ipfs_hash}'. This looks like a Governance Action ID. Please enter a valid IPFS CID (starting with Qm... or bafy...).")
+            
+        # Basic CID validation (length check)
+        if len(ipfs_hash) < 40:
+             raise ValueError(f"Invalid IPFS Hash: '{ipfs_hash}'. Too short.")
+
         for gateway in self.IPFS_GATEWAYS:
             url = f"{gateway}{ipfs_hash}"
             try:
@@ -90,16 +101,7 @@ class ProposalFetcher:
                 continue
         
         # All gateways failed
-        return ProposalMetadata(
-            title="Metadata Unavailable",
-            abstract="[IPFS retrieval failed]",
-            motivation="",
-            rationale="",
-            amount=0,
-            references=[],
-            ipfs_hash=ipfs_hash,
-            error="All IPFS gateways unreachable"
-        )
+        raise ValueError(f"IPFS Hash {ipfs_hash} not found or unreachable")
     
     async def analyze_proposal_content(
         self,

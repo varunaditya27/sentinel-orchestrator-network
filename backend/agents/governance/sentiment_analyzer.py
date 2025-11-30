@@ -32,10 +32,8 @@ class SentimentAnalyzer:
         # Load environment variables from .env file
         load_dotenv()
         
-        self.blockfrost_url = os.getenv(
-            "BLOCKFROST_API_URL",
-            "https://cardano-preprod.blockfrost.io/api"
-        )
+        self.blockfrost_url = os.getenv("BLOCKFROST_API_URL", "https://cardano-preprod.blockfrost.io/api")
+        self.koios_url = os.getenv("KOIOS_API_URL", "https://preprod.koios.rest/api/v1")
         self.blockfrost_key = os.getenv("BLOCKFROST_API_KEY", "")
         self.llm = AgentLLM("SentimentAnalyzer")
         self.logger.info("SentimentAnalyzer initialized with LLM capabilities")
@@ -55,16 +53,87 @@ class SentimentAnalyzer:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 headers = {"project_id": self.blockfrost_key}
                 
+                # Decode Bech32 if needed
+                target_id = gov_action_id
+                is_bech32 = False
+                if gov_action_id.startswith("gov_action"):
+                    try:
+                        import bech32
+                        hrp, data = bech32.bech32_decode(gov_action_id)
+                        if data:
+                            decoded = bech32.convertbits(data, 5, 8, False)
+                            if len(decoded) >= 32:
+                                tx_hash = bytes(decoded[:32]).hex()
+                                target_id = tx_hash + "#0" 
+                                is_bech32 = True
+                    except:
+                        pass
+                
+                # If not Bech32, check if it looks like a Hex ID (64 chars + optional index)
+                if not is_bech32:
+                    # Simple check: must be at least 64 chars
+                    if len(gov_action_id) < 64:
+                         raise ValueError(f"Invalid Governance Action ID format: {gov_action_id}")
+
+                # Verify existence first
+                exists = False
+                
+                # 1. Try Blockfrost
+                try:
+                    prop_resp = await client.get(
+                        f"{self.blockfrost_url}/v0/governance/proposals/{target_id}",
+                        headers=headers
+                    )
+                    if prop_resp.status_code == 200:
+                        exists = True
+                    elif prop_resp.status_code == 403:
+                        logging.warning("Blockfrost access denied (403). Switching to Koios fallback.")
+                except Exception as e:
+                    logging.error(f"Blockfrost check failed: {e}")
+
+                # 2. Fallback to Koios if not confirmed
+                if not exists:
+                    try:
+                        # Koios needs Tx Hash (Hex)
+                        # If target_id is hash#index, split it
+                        tx_hash_hex = target_id.split('#')[0]
+                        if len(tx_hash_hex) == 64:
+                            # Use separate client for Koios to avoid auth header issues if any, 
+                            # or just reuse but be careful with headers. 
+                            # Koios doesn't need project_id.
+                            async with httpx.AsyncClient(verify=False) as k_client:
+                                payload = {"_tx_hashes": [tx_hash_hex]}
+                                k_resp = await k_client.post(f"{self.koios_url}/tx_info", json=payload)
+                                if k_resp.status_code == 200:
+                                    data = k_resp.json()
+                                    if data and len(data) > 0:
+                                        exists = True
+                    except Exception as e:
+                        logging.error(f"Koios check failed: {e}")
+
+                if not exists:
+                    raise ValueError(f"Governance Action ID {gov_action_id} not found or invalid")
+                
                 # Get proposal votes
                 response = await client.get(
                     f"{self.blockfrost_url}/v0/governance/proposals/{gov_action_id}/votes",
                     headers=headers
                 )
                 
+                if response.status_code == 404 or response.status_code == 400:
+                    raise ValueError(f"Governance Action ID {gov_action_id} not found or invalid")
+                
                 if response.status_code != 200:
                     return self._default_sentiment()
                 
                 votes = response.json()
+                if not votes and len(gov_action_id) > 10: 
+                     # If valid-looking ID returns empty votes, it might just have no votes, 
+                     # but if it's a dummy ID, we want to flag it. 
+                     # For this task, user wants to verify EXISTENCE. 
+                     # Blockfrost returns [] for valid ID with no votes.
+                     # To verify existence, we should fetch the proposal details first.
+                     pass
                 
                 # Count votes
                 yes_count = len([v for v in votes if v.get('vote') == 'yes'])
@@ -95,6 +164,8 @@ class SentimentAnalyzer:
                     sample_size=total
                 )
                 
+        except ValueError as e:
+            raise e
         except Exception as e:
             self.logger.error(f"Sentiment analysis failed: {e}")
             return self._default_sentiment()

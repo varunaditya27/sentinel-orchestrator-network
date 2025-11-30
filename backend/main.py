@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, BackgroundTasks, HTTPException, Response
+from fastapi import FastAPI, WebSocket, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
@@ -650,10 +650,19 @@ async def check_proposal(request: Dict[str, Any]):
         proposal = request.get("proposal", {})
         ipfs_hash = request.get("ipfs_hash")
 
+        # Validation
+        if not ipfs_hash and not (proposal.get("id") and proposal.get("title")):
+             raise HTTPException(status_code=400, detail="Missing ipfs_hash or valid proposal object (id, title required)")
+
         # If IPFS hash provided, fetch metadata first
         if ipfs_hash:
             logger.info(f"Fetching proposal metadata for hash: {ipfs_hash}")
-            metadata = await proposal_fetcher.fetch_metadata(ipfs_hash)
+            try:
+                metadata = await proposal_fetcher.fetch_metadata(ipfs_hash)
+            except ValueError as e:
+                if "not found" in str(e).lower():
+                    raise HTTPException(status_code=404, detail=str(e))
+                raise HTTPException(status_code=400, detail=str(e))
             
             # Convert dataclass to dict for analysis
             proposal = {
@@ -667,7 +676,12 @@ async def check_proposal(request: Dict[str, Any]):
             }
         
         # Check policy compliance
-        policy_result = await policy_analyzer.analyze(proposal)
+        try:
+            policy_result = await policy_analyzer.analyze(proposal)
+        except ValueError as e:
+            if "not found" in str(e).lower():
+                raise HTTPException(status_code=404, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e))
         
         # Analyze sentiment (mocked for now as we don't have real on-chain voting data source in this context)
         # In a real scenario, we'd query a db or indexer
@@ -688,6 +702,8 @@ async def check_proposal(request: Dict[str, Any]):
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error checking proposal: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -705,6 +721,12 @@ async def analyze_treasury_proposal(request: Dict[str, Any]):
     try:
         result = await treasury_guardian.process(request)
         return result
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error in treasury analysis: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -754,6 +776,9 @@ async def drep_consensus(request: Dict[str, Any]):
     """
     try:
         proposal_id = request.get("proposal_id")
+        if not proposal_id:
+            raise HTTPException(status_code=400, detail="Missing proposal_id")
+            
         # Mock fetching proposal details if not provided
         proposal = {
             "proposal_id": proposal_id,
@@ -770,7 +795,12 @@ async def drep_consensus(request: Dict[str, Any]):
         policy_result = await policy_analyzer.analyze(proposal)
         
         # 2. Sentiment Analysis
-        sentiment_result = await sentiment_analyzer.analyze(proposal["proposal_id"])
+        try:
+            sentiment_result = await sentiment_analyzer.analyze(proposal["proposal_id"])
+        except ValueError as e:
+            if "not found" in str(e).lower():
+                raise HTTPException(status_code=404, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e))
         
         # 3. Treasury Analysis
         treasury_result = await treasury_guardian.process(proposal)
@@ -818,6 +848,8 @@ async def drep_consensus(request: Dict[str, Any]):
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error in DRep consensus: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

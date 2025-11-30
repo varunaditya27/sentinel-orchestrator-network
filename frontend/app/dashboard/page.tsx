@@ -13,6 +13,7 @@ import { HyperspaceTransition } from "@/components/HyperspaceTransition";
 import { HolographicCard } from "@/components/HolographicCard";
 import { ScrambleText } from "@/components/ScrambleText";
 import { Shield, Activity, Globe, Cpu, Wifi, Terminal } from "lucide-react";
+import { ProtectedPage } from "@/components/ProtectedPage";
 
 
 
@@ -46,7 +47,7 @@ export default function Dashboard() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/api/scan-history");
+            const res = await fetch("http://localhost:8000/api/v1/scans/history");
             if (res.ok) {
                 const data = await res.json();
                 setScanHistory(data);
@@ -154,6 +155,7 @@ export default function Dashboard() {
     };
 
     return (
+        <ProtectedPage>
         <main className="min-h-screen text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 pt-24 pb-8 px-4 md:px-8">
             {/* Base Background Color */}
             <div className="fixed inset-0 bg-obsidian-core -z-50" />
@@ -419,5 +421,6 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
         </main>
+        </ProtectedPage>
     );
 }
