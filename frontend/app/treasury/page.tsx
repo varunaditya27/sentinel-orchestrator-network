@@ -19,26 +19,43 @@ export default function TreasuryPage() {
         setIsAnalyzing(true);
         setResult(null);
 
-        // Simulate API call delay
-        setTimeout(() => {
-            // Mock Result based on input length for variety
-            const isHighRisk = input.length % 2 === 0;
-            setResult({
-                riskScore: isHighRisk ? 85 : 25,
-                zScore: isHighRisk ? 3.4 : 0.8,
-                nclViolation: isHighRisk,
-                contextualRisk: isHighRisk ? 0.8 : 0.2,
-                flags: isHighRisk ? [
-                    "STATISTICAL_ANOMALY: Z-score > 3",
-                    "NCL_VIOLATION: Exceeds 47.25M ADA",
-                    "CONTEXTUAL: Vague justification"
-                ] : [],
-                reasoning: isHighRisk
-                    ? "Proposal requests an unusually large amount without clear milestones."
-                    : "Standard operational request within expected parameters."
+        try {
+            // Determine if input is amount or ID
+            const isAmount = !isNaN(Number(input));
+            const payload = {
+                proposal_id: isAmount ? "gov_action_manual" : input,
+                amount: isAmount ? Number(input) * 1000000 : 50000000000, // Convert to lovelace or default
+                proposer_id: "stake_test_123",
+                metadata: {
+                    title: "Manual Analysis",
+                    abstract: "User initiated analysis",
+                    rationale: "Checking for risk"
+                }
+            };
+
+            const response = await fetch("http://localhost:8000/api/v1/treasury/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
             });
+
+            if (!response.ok) throw new Error("Analysis failed");
+            const data = await response.json();
+
+            setResult({
+                riskScore: data.risk_score,
+                zScore: data.stats.z_score,
+                nclViolation: data.findings.some((f: string) => f.includes("UNUSUALLY_LARGE_WITHDRAWAL")),
+                contextualRisk: data.risk_score / 100,
+                flags: data.findings,
+                reasoning: `Risk Score: ${data.risk_score}. Verdict: ${data.vote}.`
+            });
+
+        } catch (error) {
+            console.error(error);
+        } finally {
             setIsAnalyzing(false);
-        }, 2000);
+        }
     };
 
     return (
