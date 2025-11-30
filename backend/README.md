@@ -161,42 +161,42 @@ backend/
 ### Agent Hierarchy
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        AGENT NETWORK                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
+┌────────────────────────────────────────────────────────────────┐
+│                        AGENT NETWORK                           │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                 SENTINEL AGENT                          │   │
-│  │  • Entry point for all security scans                  │   │
-│  │  • Protocol compliance validation                      │   │
-│  │  • Generates HIRE_REQUEST for Oracle                   │   │
-│  │  • Produces final verdict + ThreatProof               │   │
-│  │  DID: did:masumi:sentinel_01                          │   │
+│  │     • Entry point for all security scans                │   │
+│  │     • Protocol compliance validation                    │   │
+│  │     • Generates HIRE_REQUEST for Oracle                 │   │
+│  │     • Produces final verdict + ThreatProof              │   │
+│  │     DID: did:masumi:sentinel_01                         │   │
 │  └──────────────────────┬──────────────────────────────────┘   │
-│                         │                                       │
-│                         ▼                                       │
+│                         │                                      │
+│                         ▼                                      │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                  ORACLE AGENT                           │   │
-│  │  • Spawns 5 specialists in parallel                    │   │
-│  │  • Bayesian fusion of risk scores                      │   │
-│  │  • Weighted consensus algorithm                        │   │
-│  │  DID: did:masumi:oracle_01                            │   │
+│  │     • Spawns 5 specialists in parallel                  │   │
+│  │     • Bayesian fusion of risk scores                    │   │
+│  │     • Weighted consensus algorithm                      │   │
+│  │     DID: did:masumi:oracle_01                           │   │
 │  └──────────────────────┬──────────────────────────────────┘   │
-│                         │                                       │
-│         ┌───────────────┼───────────────┐                      │
-│         │               │               │                      │
-│         ▼               ▼               ▼                      │
-│    ┌─────────┐    ┌─────────┐    ┌─────────┐                  │
-│    │  Block  │    │  Stake  │    │  Vote   │                  │
-│    │ Scanner │    │Analyzer │    │ Doctor  │                  │
-│    └────┬────┘    └────┬────┘    └────┬────┘                  │
-│         │              │              │                        │
-│    ┌─────────┐    ┌─────────┐                                 │
-│    │ Mempool │    │ Replay  │                                 │
-│    │ Sniffer │    │Detector │                                 │
-│    └─────────┘    └─────────┘                                 │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+│                         │                                      │
+│          ┌──────────────┼───────────────┐                      │
+│          │              │               │                      │
+│          ▼              ▼               ▼                      │
+│     ┌─────────┐    ┌─────────┐    ┌─────────┐                  │
+│     │  Block  │    │  Stake  │    │  Vote   │                  │
+│     │ Scanner │    │ Analyzer│    │ Doctor  │                  │
+│     └────┬────┘    └────┬────┘    └────┬────┘                  │
+│          │              │                                      │
+│     ┌─────────┐    ┌─────────┐                                 │
+│     │ Mempool │    │ Replay  │                                 │
+│     │ Sniffer │    │Detector │                                 │
+│     └─────────┘    └─────────┘                                 │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ### Agent Specifications
