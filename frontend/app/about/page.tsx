@@ -1,238 +1,219 @@
 "use client";
 
-import React, { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { AgentEconomy } from "@/components/AgentEconomy";
+import React, { useRef, useState, useEffect } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { ScrambleText } from "@/components/ScrambleText";
 import { HolographicCard } from "@/components/HolographicCard";
-import { Shield, AlertTriangle, CheckCircle, Zap, Search, Lock } from "lucide-react";
+import { Shield, Zap, Globe, Activity, Terminal, Cpu, Lock, Server, Database } from "lucide-react";
+import Image from "next/image";
 
-// Tech Decoration Component
+// --- Utility Components ---
+
 const TechCorner = ({ className }: { className?: string }) => (
     <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
         <path d="M1 1V6M1 1H6" stroke="currentColor" strokeWidth="2" />
     </svg>
 );
 
-export default function AboutPage() {
-    const containerRef = useRef(null);
-    const { scrollYProgress } = useScroll({
-        target: containerRef,
-        offset: ["start start", "end end"],
-    });
+const GlowingOrb = ({ color = "bg-neon-orchid" }: { color?: string }) => (
+    <div className={`absolute w-[500px] h-[500px] ${color} rounded-full blur-[120px] opacity-20 pointer-events-none mix-blend-screen`} />
+);
 
-    const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-    const scaleHero = useTransform(scrollYProgress, [0, 0.2], [1, 0.9]);
+// --- Components ---
+
+const GlowingOrb = ({ color = "cyan", size = "md" }) => {
+    const sizeClasses = {
+        sm: "w-32 h-32",
+        md: "w-64 h-64",
+        lg: "w-96 h-96",
+    };
+
+    const colorClasses = {
+        cyan: "bg-cyan-500 shadow-cyan-500/50",
+        purple: "bg-purple-500 shadow-purple-500/50",
+        emerald: "bg-emerald-500 shadow-emerald-500/50",
+        orange: "bg-orange-500 shadow-orange-500/50",
+    };
 
     return (
-        <main ref={containerRef} className="min-h-[300vh] text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
-            {/* Base Background Color */}
-            <div className="fixed inset-0 bg-obsidian-core -z-50" />
+        <div className={`absolute rounded-full blur-[100px] opacity-20 animate-pulse ${sizeClasses[size]} ${colorClasses[color]}`} />
+    );
+};
 
-            {/* Fixed Background */}
-            <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#1E2738_0%,#0A0E1A_100%)] -z-20" />
-            <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]" />
-            <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-0" />
-            {/* Fallback Background for depth */}
-            <div className="fixed inset-0 bg-[url('/solution-bg.png')] bg-cover bg-center opacity-[0.05] mix-blend-screen pointer-events-none -z-5" />
+const AgentCard = ({ name, role, description, image, stats, color = "cyan", icon: Icon }) => {
+    return (
+        <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            className={`relative group overflow-hidden rounded-2xl border border-${color}-500/30 bg-black/40 backdrop-blur-md p-6 hover:border-${color}-400/60 transition-all duration-500`}
+        >
+            <div className={`absolute inset-0 bg-gradient-to-br from-${color}-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-            {/* Hero Section */}
-            <section className="h-screen flex flex-col items-center justify-center px-4 sticky top-0">
-                <motion.div
-                    style={{ opacity: opacityHero, scale: scaleHero }}
-                    className="text-center space-y-8 max-w-4xl"
-                >
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8 }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-4"
-                    >
-                        <Shield className="w-4 h-4 text-neon-orchid" />
-                        <span className="text-xs font-mono tracking-widest text-neon-orchid uppercase">Protocol Architecture</span>
-                    </motion.div>
-
-                    <motion.h1
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 1, delay: 0.2 }}
-                        className="text-6xl md:text-8xl font-orbitron font-black leading-tight tracking-tighter"
-                    >
-                        THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-orchid to-electric-cyan">
-                            <ScrambleText text="INVISIBLE" delay={500} />
-                        </span><br />
-                        <ScrambleText text="GUARDIAN" delay={1000} />
-                    </motion.h1>
-
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.4 }}
-                        className="text-xl text-white/60 max-w-2xl mx-auto leading-relaxed"
-                    >
-                        How a swarm of autonomous agents protects your assets from the hidden dangers of the Voltaire era.
-                    </motion.p>
-
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1, duration: 1 }}
-                        className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-                    >
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Scroll to Learn</span>
-                        <div className="w-[1px] h-12 bg-gradient-to-b from-neon-orchid to-transparent" />
-                    </motion.div>
-                </motion.div>
-            </section>
-
-            {/* Content Sections (Overlapping) */}
-            <div className="relative z-10 mt-[100vh] space-y-[50vh] pb-[50vh]">
-
-                {/* Section 1: The Problem */}
-                <section className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                    <motion.div
-                        initial={{ opacity: 0, x: -50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true, margin: "-20%" }}
-                        className="space-y-6"
-                    >
-                        <div className="w-12 h-12 rounded-2xl bg-amber-warning/10 flex items-center justify-center border border-amber-warning/20 shadow-[0_0_30px_rgba(255,193,7,0.2)]">
-                            <AlertTriangle className="w-6 h-6 text-amber-warning" />
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-orbitron font-bold">The Governance Fog</h2>
-                        <p className="text-lg text-white/70 leading-relaxed">
-                            In the Voltaire era, governance actions are on-chain transactions. But what if the chain you&apos;re on isn&apos;t the real one?
-                            <br /><br />
-                            <strong>Chain Splits</strong> create &quot;ghost chains&quot; where your signature can be replayed or your vote lost. Wallets are blind to this—they just see a connection.
-                        </p>
-                    </motion.div>
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true, margin: "-20%" }}
-                    >
-                        <HolographicCard className="p-8 bg-black/60 border-white/10 backdrop-blur-xl relative overflow-hidden group rounded-3xl">
-                            <TechCorner className="absolute top-4 left-4 text-amber-warning/50" />
-                            <TechCorner className="absolute top-4 right-4 rotate-90 text-amber-warning/50" />
-                            <TechCorner className="absolute bottom-4 right-4 rotate-180 text-amber-warning/50" />
-                            <TechCorner className="absolute bottom-4 left-4 -rotate-90 text-amber-warning/50" />
-
-                            <div className="absolute inset-0 bg-gradient-to-br from-amber-warning/5 to-transparent opacity-50" />
-                            <div className="relative z-10 flex flex-col items-center gap-4 text-center">
-                                <div className="w-full h-48 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:border-amber-warning/30 transition-colors">
-                                    <div className="absolute inset-0 flex items-center justify-center gap-8 opacity-50">
-                                        <motion.div
-                                            className="w-1 h-32 bg-white/20"
-                                            animate={{ height: ["0%", "100%", "0%"] }}
-                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                        />
-                                        <motion.div
-                                            className="w-1 h-32 bg-white/20 rotate-12 origin-bottom"
-                                            animate={{ rotate: [12, 15, 12] }}
-                                            transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 3 }}
-                                        />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <span className="font-mono text-amber-warning bg-black/50 px-3 py-1 rounded border border-amber-warning/30 animate-pulse block mb-2">FORK DETECTED</span>
-                                        <div className="text-[10px] font-mono text-amber-warning/70">DIVERGENCE: -30 BLOCKS</div>
-                                    </div>
-
-                                    {/* Glitch Overlay */}
-                                    <div className="absolute inset-0 bg-amber-warning/10 mix-blend-overlay opacity-0 group-hover:opacity-100 animate-pulse" />
-                                </div>
-                                <p className="text-sm text-white/50 font-mono">Simulated Chain Split Scenario</p>
-                            </div>
-                        </HolographicCard>
-                    </motion.div>
-                </section>
-
-                {/* Section 2: The Swarm */}
-                <section className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative">
-                    {/* Background Circuit for this section */}
-                    <div className="absolute inset-0 bg-[url('/protocol-circuit.png')] bg-contain bg-no-repeat bg-right opacity-10 mix-blend-screen pointer-events-none" />
-
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true, margin: "-20%" }}
-                        className="order-2 md:order-1"
-                    >
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-neon-orchid/20 blur-[100px] rounded-full" />
-                            <AgentEconomy />
-                        </div>
-                    </motion.div>
-                    <motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true, margin: "-20%" }}
-                        className="space-y-6 order-1 md:order-2"
-                    >
-                        <div className="w-12 h-12 rounded-2xl bg-neon-orchid/10 flex items-center justify-center border border-neon-orchid/20 shadow-[0_0_30px_rgba(255,0,110,0.2)]">
-                            <Zap className="w-6 h-6 text-neon-orchid" />
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-orbitron font-bold">Enter The Swarm</h2>
-                        <p className="text-lg text-white/70 leading-relaxed">
-                            Sentinel is a <strong>Pre-Signing Middleware</strong>. Before you sign, a swarm of AI agents activates to verify the reality of your connection.
-                        </p>
-                        <ul className="space-y-4">
-                            {[
-                                { name: "Sentinel", role: "Orchestrator", desc: "Parses intent & hires specialists", color: "text-neon-orchid" },
-                                { name: "Oracle", role: "Scout", desc: "Verifies block height across 50+ nodes", color: "text-electric-cyan" },
-                                { name: "Midnight", role: "Ghost", desc: "Generates ZK-proofs of threats", color: "text-amber-warning" }
-                            ].map((agent, idx) => (
-                                <li key={idx} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
-                                    <div className={`font-bold font-mono ${agent.color} group-hover:scale-110 transition-transform`}>{agent.name}</div>
-                                    <div className="w-[1px] h-4 bg-white/20" />
-                                    <div className="text-sm text-white/80">
-                                        <span className="font-bold">{agent.role}</span>: {agent.desc}
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </motion.div>
-                </section>
-
-                {/* Section 3: The Workflow */}
-                <section className="max-w-5xl mx-auto px-4 text-center space-y-16">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: "-20%" }}
-                    >
-                        <h2 className="text-4xl md:text-5xl font-orbitron font-bold mb-6">Defense Protocol</h2>
-                        <p className="text-white/60 max-w-2xl mx-auto">The automated sequence that executes in milliseconds to protect your transaction.</p>
-                    </motion.div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[
-                            { icon: Search, title: "1. Scan", desc: "Oracle agents ping global nodes to verify consensus weight." },
-                            { icon: Lock, title: "2. Verify", desc: "Midnight agents generate ZK-proofs if anomalies are found." },
-                            { icon: CheckCircle, title: "3. Act", desc: "Sentinel blocks the transaction or greenlights it." }
-                        ].map((step, idx) => (
-                            <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, y: 30 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-20%" }}
-                                transition={{ delay: idx * 0.2 }}
-                            >
-                                <HolographicCard className="p-8 h-full bg-white/5 border-white/10 hover:bg-white/10 transition-colors group relative overflow-hidden rounded-3xl">
-                                    <TechCorner className="absolute top-2 left-2 text-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <TechCorner className="absolute bottom-2 right-2 rotate-180 text-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                                    <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                                        <step.icon className="w-8 h-8 text-white" />
-                                    </div>
-                                    <h3 className="text-xl font-bold font-orbitron mb-4">{step.title}</h3>
-                                    <p className="text-white/60 leading-relaxed">{step.desc}</p>
-                                </HolographicCard>
-                            </motion.div>
-                        ))}
+            <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-4">
+                    <div className={`p-2 rounded-lg bg-${color}-500/20 text-${color}-400`}>
+                        <Icon size={24} />
                     </div>
-                </section>
+                    <div className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs font-mono text-white/70">
+                        {role}
+                    </div>
+                </div>
 
+                <h3 className="text-2xl font-bold text-white mb-2 font-mono tracking-tight">{name}</h3>
+                <p className="text-gray-400 text-sm mb-6 flex-grow">{description}</p>
+
+                {image && (
+                    <div className="relative w-full h-48 mb-6 rounded-lg overflow-hidden border border-white/10 group-hover:border-white/20 transition-colors">
+                        <Image
+                            src={image}
+                            alt={name}
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                    </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 mt-auto">
+                    {stats.map((stat, i) => (
+                        <div key={i} className="bg-white/5 rounded-lg p-2 border border-white/5">
+                            <div className="text-xs text-gray-500 uppercase tracking-wider">{stat.label}</div>
+                            <div className={`text-sm font-mono text-${color}-400`}>{stat.value}</div>
+                        </div>
+                    ))}
+                </div>
             </div>
-        </main>
+        </motion.div>
+    );
+};
+
+const SpecialistCard = ({ name, role, icon: Icon, color, description, features }) => (
+    <motion.div
+        whileHover={{ scale: 1.05 }}
+        className={`p-4 rounded-xl border border-${color}-500/20 bg-black/60 backdrop-blur-sm hover:bg-${color}-900/10 hover:border-${color}-500/50 transition-all duration-300`}
+    >
+        <div className={`w-10 h-10 rounded-lg bg-${color}-500/20 flex items-center justify-center mb-3 text-${color}-400`}>
+            <Icon size={20} />
+        </div>
+        <h4 className="text-lg font-bold text-white font-mono mb-1">{name}</h4>
+        <div className={`text-xs text-${color}-400 mb-2 uppercase tracking-wider`}>{role}</div>
+        <p className="text-gray-400 text-xs mb-3 leading-relaxed">{description}</p>
+        <ul className="space-y-1">
+            {features.map((feature, i) => (
+                <li key={i} className="flex items-center text-xs text-gray-500">
+                    <div className={`w-1 h-1 rounded-full bg-${color}-500 mr-2`} />
+                    {feature}
+                </li>
+            ))}
+        </ul>
+    </motion.div>
+);
+
+const LiveTerminal = () => {
+    const [logs, setLogs] = useState<string[]>([]);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const logTemplates = [
+        { msg: "[SENTINEL] Validating policy ID 8f9a...2b1c", color: "text-cyan-400" },
+        { msg: "[ORACLE] Connecting to BlockScanner specialist...", color: "text-purple-400" },
+        { msg: "[BLOCK_SCANNER] Verifying block height 9823412...", color: "text-orange-400" },
+        { msg: "[MEMPOOL] Scanning for front-running patterns...", color: "text-blue-400" },
+        { msg: "[REPLAY] Checking UTxO consumption history...", color: "text-red-400" },
+        { msg: "[STAKE] Analyzing pool saturation: 42.5% (SAFE)", color: "text-emerald-400" },
+        { msg: "[GOVERNANCE] Fetching proposal CIP-1694 metadata...", color: "text-yellow-400" },
+        { msg: "[POLICY] Checking treasury cap compliance...", color: "text-pink-400" },
+        { msg: "[SENTIMENT] Analyzing on-chain voting patterns...", color: "text-indigo-400" },
+        { msg: "[TREASURY] Z-Score analysis: 0.42 (NORMAL)", color: "text-green-400" },
+        { msg: "[MESSAGE_BUS] Broadcast: HIRE_REQUEST sig:a7b2...", color: "text-gray-500" },
+        { msg: "[ORACLE] Consensus verified. Verdict: SAFE", color: "text-green-500 font-bold" },
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const newLog = logTemplates[Math.floor(Math.random() * logTemplates.length)];
+            const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
+            setLogs(prev => [...prev.slice(-8), `[${timestamp}] ${newLog.msg}`]);
+        }, 1500);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="font-mono text-xs bg-black/80 border border-white/10 rounded-lg p-4 h-64 overflow-hidden relative">
+            <div className="absolute top-2 right-2 flex space-x-1">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+            </div>
+            <div className="text-gray-500 mb-2 border-b border-white/5 pb-2">system_status --monitor --verbose</div>
+            <div className="space-y-1">
+                <AnimatePresence>
+                    {logs.map((log, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="truncate"
+                        >
+                            <span className="text-gray-600 mr-2">{log.split("] ")[0]}]</span>
+                            <span className={log.includes("SAFE") ? "text-green-400" : "text-gray-300"}>
+                                {log.split("] ").slice(1).join("] ")}
+                            </span>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black to-transparent" />
+        </div>
+    );
+};
+
+export default function AboutPage() {
+                                </div >
+                            </div >
+                        </motion.div >
+
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative"
+        >
+            <div className="absolute -inset-10 bg-electric-cyan/20 blur-[100px] rounded-full" />
+            <LiveTerminal />
+
+            {/* Decorative lines */}
+            <div className="absolute -right-12 top-1/2 w-24 h-[1px] bg-gradient-to-r from-white/20 to-transparent" />
+            <div className="absolute -left-12 top-1/2 w-24 h-[1px] bg-gradient-to-l from-white/20 to-transparent" />
+        </motion.div>
+                    </div >
+                </section >
+
+        {/* --- Call to Action --- */ }
+        < section className = "py-32 px-4 text-center relative" >
+            <div className="max-w-4xl mx-auto space-y-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                >
+                    <h2 className="text-4xl md:text-6xl font-orbitron font-bold mb-8">Ready to Secure Your Vote?</h2>
+                    <p className="text-xl text-white/50 mb-12">
+                        Join the network and let the swarm protect your governance participation.
+                    </p>
+
+                    <button className="group relative px-8 py-4 bg-white text-black font-bold font-orbitron tracking-wider text-lg rounded-full overflow-hidden hover:scale-105 transition-transform">
+                        <div className="absolute inset-0 bg-gradient-to-r from-neon-orchid to-electric-cyan opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="relative z-10 group-hover:text-white transition-colors">LAUNCH DASHBOARD</span>
+                    </button>
+                </motion.div>
+            </div>
+                </section >
+
+        {/* --- Footer --- */ }
+        < footer className = "py-12 border-t border-white/10 text-center text-white/30 text-sm font-mono" >
+            <p>SENTINEL ORCHESTRATOR NETWORK // v2.0.0</p>
+                </footer >
+
+            </div >
+        </main >
     );
 }
